@@ -73,8 +73,12 @@ void CPointPopulatorInterface::InputChangeBotAttributes( inputdata_t &inputdata 
 	if ( TFGameRules()->IsMannVsMachineMode() )
 	{
 		CUtlVector< CTFBot* > botVector;
-		CollectPlayers( &botVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS );
-
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			CollectPlayers(&botVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS);
+		}
+		else {
+			CollectPlayers(&botVector, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS);
+		}
 		for ( int i=0; i<botVector.Count(); ++i )
 		{
 			const CTFBot::EventChangeAttributes_t* pEvent = botVector[i]->GetEventChangeAttributes( pszEventName );

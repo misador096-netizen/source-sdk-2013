@@ -61,8 +61,14 @@ ActionResult< CTFBot >	CTFBotSniperLurk::OnStart( CTFBot *me, Action< CTFBot > *
 	}
 
 	m_priorHint = NULL;
-
-	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == team )
 	{
 		// mann vs machine snipers shouldn't stop until they reach their home
 		//m_isOpportunistic = false;
@@ -519,7 +525,14 @@ QueryResultType CTFBotSniperLurk::ShouldAttack( const INextBot *bot, const CKnow
 //---------------------------------------------------------------------------------------------
 QueryResultType CTFBotSniperLurk::ShouldRetreat( const INextBot *me ) const
 {
-	if ( TFGameRules()->IsMannVsMachineMode() && me->GetEntity()->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules()->IsMannVsMachineMode() && me->GetEntity()->GetTeamNumber() == team )
 	{
 		return ANSWER_NO;
 	}

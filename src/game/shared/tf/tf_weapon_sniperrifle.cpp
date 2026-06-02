@@ -1663,7 +1663,14 @@ bool CSniperDot::ShouldDraw( void )
 void CSniperDot::ClientThink( void )
 {
 	// snipers have laser sights in PvE mode
-	if ( TFGameRules()->IsPVEModeActive() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules()->IsPVEModeActive() && GetTeamNumber() == team )
 	{
 		C_TFPlayer *pPlayer = ToTFPlayer( GetOwnerEntity() );
 		if ( pPlayer )
@@ -1676,8 +1683,12 @@ void CSniperDot::ClientThink( void )
 			if ( m_laserBeamEffect )
 			{
 				m_laserBeamEffect->SetSortOrigin( m_laserBeamEffect->GetRenderOrigin() );
-				m_laserBeamEffect->SetControlPoint( 2, Vector( 0, 0, 255 ) );
-
+				if (team != TF_TEAM_RED) {
+					m_laserBeamEffect->SetControlPoint(2, Vector(0, 0, 255));
+				}
+				else {
+					m_laserBeamEffect->SetControlPoint(2, Vector(255, 0, 0));
+				}
 				Vector vecAttachment;
 				Vector vecEndPos;
 				float flSize;

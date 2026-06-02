@@ -58,13 +58,35 @@ void C_ObjectTeleporter::UpdateOnRemove( void )
 {
 	StopActiveEffects();
 	StopChargedEffects();
-
+	StopBeamEffects();
+	
 	if ( m_pSpinSound )
 	{
 		CSoundEnvelopeController::GetController().SoundDestroy( m_pSpinSound );
 	}
 
 	BaseClass::UpdateOnRemove();
+}
+
+void C_ObjectTeleporter::StartBeamEffects()
+{
+	StopBeamEffects();
+	Assert(m_hBuildingBeamEffect.m_pObject == NULL);
+	if (GetTeamNumber() == TF_TEAM_BLUE) {
+		m_hBuildingBeamEffect = ParticleProp()->Create("teleporter_mvm_bot_persist", PATTACH_ABSORIGIN);
+	}
+	if (GetTeamNumber() == TF_TEAM_RED) {
+		m_hBuildingBeamEffect = ParticleProp()->Create("teleporter_mvm_bot_persist_red", PATTACH_ABSORIGIN);
+	}
+}
+
+void C_ObjectTeleporter::StopBeamEffects()
+{
+	if (m_hBuildingBeamEffect)
+	{
+		ParticleProp()->StopEmission(m_hBuildingBeamEffect);
+		m_hBuildingBeamEffect = NULL;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -224,12 +246,24 @@ void C_ObjectTeleporter::UpdateTeleporterEffects( void )
 	}
 
 	// In MVM, teleporter from invaders act as spawn point. Always play active effect
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
+	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && !TFGameRules()->IsHL2MVMMode() )
 	{
 		if ( m_iState != TELEPORTER_STATE_BUILDING && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
 		{
 			StartChargedEffects();
 			StartActiveEffects();
+			StartBeamEffects();
+			return;
+		}
+	}
+
+	if (TFGameRules() && TFGameRules()->IsHL2MVMMode())
+	{
+		if (m_iState != TELEPORTER_STATE_BUILDING && GetTeamNumber() == TF_TEAM_RED)
+		{
+			StartChargedEffects();
+			StartActiveEffects();
+			StartBeamEffects();
 			return;
 		}
 	}
@@ -250,6 +284,7 @@ void C_ObjectTeleporter::UpdateTeleporterEffects( void )
 	else if ( ( m_iState <= TELEPORTER_STATE_IDLE || m_iState == TELEPORTER_STATE_UPGRADING ) && m_iOldState > TELEPORTER_STATE_IDLE )
 	{
 		StopActiveEffects();
+		StopBeamEffects();
 	}
 }
 
@@ -450,6 +485,7 @@ void C_ObjectTeleporter::OnGoInactive( void )
 	StopActiveEffects();
 	StopBuildingEffects();
 	StopChargedEffects();
+	StopBeamEffects();
 
 	BaseClass::OnGoInactive();
 }

@@ -11094,11 +11094,22 @@ float CTFPlayer::TeamFortress_CalculateMaxSpeed( bool bIgnoreSpecialAbility /*= 
 	// Mann Vs Machine mode has a speed penalty for carrying the flag
 	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-		{
-			if ( HasTheFlag() && !IsMiniBoss() )
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
 			{
-				maxfbspeed *= tf_mvm_bot_flag_carrier_movement_penalty.GetFloat();
+				if (HasTheFlag() && !IsMiniBoss())
+				{
+					maxfbspeed *= tf_mvm_bot_flag_carrier_movement_penalty.GetFloat();
+				}
+			}
+		}
+		else {
+			if (GetTeamNumber() == TF_TEAM_RED)
+			{
+				if (HasTheFlag() && !IsMiniBoss())
+				{
+					maxfbspeed *= tf_mvm_bot_flag_carrier_movement_penalty.GetFloat();
+				}
 			}
 		}
 	}
@@ -12038,8 +12049,14 @@ void CTFPlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalking
 //-----------------------------------------------------------------------------
 const char *CTFPlayer::GetOverrideStepSound( const char *pszBaseStepSoundName )
 {
-
-	if( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS && !IsMiniBoss() && !m_Shared.InCond( TF_COND_DISGUISED ) )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == team && !IsMiniBoss() && !m_Shared.InCond( TF_COND_DISGUISED ) )
 	{
 		return "MVM.BotStep";
 	}
@@ -13429,8 +13446,14 @@ int CTFPlayerShared::GetSequenceForDeath( CBaseAnimating* pRagdoll, bool bBurnin
 
 	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( m_pOuter && ( m_pOuter->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
-			return -1;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (m_pOuter && (m_pOuter->GetTeamNumber() == TF_TEAM_PVE_INVADERS))
+				return -1;
+		}
+		else {
+			if (m_pOuter && (m_pOuter->GetTeamNumber() == TF_TEAM_RED))
+				return -1;
+		}
 	}
 
 	int iDeathSeq = -1;
@@ -14028,11 +14051,22 @@ void CTFPlayerShared::PulseRageBuff( ERageBuffSlot eBuffSlot )
 	// ACHIEVEMENT_TF_MVM_SOLDIER_BUFF_TEAM
 	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( ( m_pOuter->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS ) && m_pOuter->IsPlayerClass( TF_CLASS_SOLDIER ) )
-		{
-			if ( nBuffedPlayers >= 5 )
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if ((m_pOuter->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS) && m_pOuter->IsPlayerClass(TF_CLASS_SOLDIER))
 			{
-				m_pOuter->AwardAchievement( ACHIEVEMENT_TF_MVM_SOLDIER_BUFF_TEAM );
+				if (nBuffedPlayers >= 5)
+				{
+					m_pOuter->AwardAchievement(ACHIEVEMENT_TF_MVM_SOLDIER_BUFF_TEAM);
+				}
+			}
+		}
+		else {
+			if ((m_pOuter->GetTeamNumber() == TF_TEAM_BLUE) && m_pOuter->IsPlayerClass(TF_CLASS_SOLDIER))
+			{
+				if (nBuffedPlayers >= 5)
+				{
+					m_pOuter->AwardAchievement(ACHIEVEMENT_TF_MVM_SOLDIER_BUFF_TEAM);
+				}
 			}
 		}
 	}

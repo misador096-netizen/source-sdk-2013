@@ -1719,8 +1719,12 @@ void CTFBot::Event_Killed( const CTakeDamageInfo &info )
 		if ( IsPlayerClass( TF_CLASS_SPY ) )
 		{
 			CUtlVector< CTFPlayer * > playerVector;
-			CollectPlayers( &playerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS );
-
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				CollectPlayers(&playerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS);
+			}
+			else {
+				CollectPlayers(&playerVector, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS);
+			}
 			int spyCount = 0;
 			for( int i=0; i<playerVector.Count(); ++i )
 			{
@@ -1764,7 +1768,12 @@ void CTFBot::Event_Killed( const CTakeDamageInfo &info )
 			}
 
 			CUtlVector< CTFPlayer* > playerVector;
-			CollectPlayers( &playerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				CollectPlayers(&playerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS);
+			}
+			else {
+				CollectPlayers(&playerVector, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS);
+			}
 			bool bShouldAnnounceLastEngineerBotDeath = HasAttribute( CTFBot::TELEPORT_TO_HINT );
 			if ( bShouldAnnounceLastEngineerBotDeath )
 			{
@@ -1784,7 +1793,14 @@ void CTFBot::Event_Killed( const CTakeDamageInfo &info )
 				for ( int i=0; i<IBaseObjectAutoList::AutoList().Count(); ++i )
 				{
 					CBaseObject* pObj = static_cast< CBaseObject* >( IBaseObjectAutoList::AutoList()[i] );
-					if ( pObj->GetType() == OBJ_TELEPORTER && pObj->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+					int team;
+					if (!TFGameRules()->IsHL2MVMMode()) {
+						team = TF_TEAM_PVE_INVADERS;
+					}
+					else {
+						team = TF_TEAM_RED;
+					}
+					if ( pObj->GetType() == OBJ_TELEPORTER && pObj->GetTeamNumber() == team )
 					{
 						bEngineerTeleporterInTheWorld = true;
 					}
@@ -2018,9 +2034,17 @@ CCaptureFlag *CTFBot::GetFlagToFetch( void ) const
 	// MvM Engineer bot never pick up a flag
 	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS && IsPlayerClass( TF_CLASS_ENGINEER ) )
-		{
-			return NULL;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (GetTeamNumber() == TF_TEAM_PVE_INVADERS && IsPlayerClass(TF_CLASS_ENGINEER))
+			{
+				return NULL;
+			}
+		}
+		else {
+			if (GetTeamNumber() == TF_TEAM_RED && IsPlayerClass(TF_CLASS_ENGINEER))
+			{
+				return NULL;
+			}
 		}
 
 		if( HasAttribute( CTFBot::IGNORE_FLAG ) )

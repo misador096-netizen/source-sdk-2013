@@ -661,7 +661,15 @@ const char *CTFWeaponBase::GetViewModel( int iViewModel ) const
 		//CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pPlayer, iHandModelIndex, override_hand_model_index );		// this is a cleaner way of doing it, but...
 		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pPlayer, iHandModelIndex, wrench_builds_minisentry );			// ...the gunslinger is the only thing that uses this attribute for now
 	}
-
+	if (TFGameRules()->IsHL2MVMMode() && GetTeamNumber() == TF_TEAM_RED)
+	{
+		int nBotViewmodelIndex = (pPlayer->GetPlayerClass() ? pPlayer->GetPlayerClass()->GetClassIndex() : TF_CLASS_UNDEFINED);
+		if (nBotViewmodelIndex >= TF_CLASS_SCOUT && nBotViewmodelIndex <= TF_CLASS_ENGINEER)
+		{
+			Assert(pPlayer->IsMiniBoss() ? g_szBotBossViewmodels[nBotViewmodelIndex] : g_szBotViewmodels[nBotViewmodelIndex]);
+			return pPlayer->IsMiniBoss() ? g_szBotBossViewmodels[nBotViewmodelIndex] : g_szBotViewmodels[nBotViewmodelIndex];
+		}
+	}
 	const CEconItemView *pItem = GetAttributeContainer()->GetItem();
 	if ( pPlayer && pItem->IsValid() && pItem->GetStaticData()->ShouldAttachToHands() )
 	{
@@ -4672,14 +4680,26 @@ char const *CTFWeaponBase::GetShootSound( int iIndex ) const
 	if ( pItem->IsValid() )
 	{
 		int nTeam = GetTeamNumber();
-
-		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && nTeam == TF_TEAM_PVE_INVADERS )
-		{
-			CTFPlayer *pPlayer = ToTFPlayer( GetOwner() );
-			if ( pPlayer && pPlayer->IsMiniBoss() )
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (TFGameRules() && TFGameRules()->IsMannVsMachineMode() && nTeam == TF_TEAM_PVE_INVADERS)
 			{
-				// Not a real team - just a define used in replacing visuals via itemdefs ("visuals_mvm")
-				nTeam = TF_TEAM_PVE_INVADERS_GIANTS;
+				CTFPlayer* pPlayer = ToTFPlayer(GetOwner());
+				if (pPlayer && pPlayer->IsMiniBoss())
+				{
+					// Not a real team - just a define used in replacing visuals via itemdefs ("visuals_mvm")
+					nTeam = TF_TEAM_PVE_INVADERS_GIANTS;
+				}
+			}
+		}
+		else {
+			if (TFGameRules() && TFGameRules()->IsMannVsMachineMode() && nTeam == TF_TEAM_RED)
+			{
+				CTFPlayer* pPlayer = ToTFPlayer(GetOwner());
+				if (pPlayer && pPlayer->IsMiniBoss())
+				{
+					// Not a real team - just a define used in replacing visuals via itemdefs ("visuals_mvm")
+					nTeam = TF_TEAM_PVE_INVADERS_GIANTS;
+				}
 			}
 		}
 		const char *pszSound = pItem->GetStaticData()->GetWeaponReplacementSound( nTeam, (WeaponSound_t)iIndex );
@@ -5485,13 +5505,19 @@ void CTFWeaponBase::ApplyOnHitAttributes( CBaseEntity *pVictimBaseEntity, CTFPla
 			pVictim->m_Shared.AddCond( TF_COND_MARKEDFORDEATH, flDuration, pAttacker );
 
 			pAttacker->m_pMarkedForDeathTarget = pVictim;
-
+			int team;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				team = TF_TEAM_PVE_INVADERS;
+			}
+			else {
+				team = TF_TEAM_RED;
+			}
 			// ACHIEVEMENT_TF_MVM_SCOUT_MARK_FOR_DEATH
 			if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 			{
 				if ( pAttacker->IsPlayerClass( TF_CLASS_SCOUT ) && ( GetWeaponID() == TF_WEAPON_BAT_WOOD ) )
 				{
-					if ( pVictim->IsBot() && ( pVictim->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+					if ( pVictim->IsBot() && ( pVictim->GetTeamNumber() == team ) )
 					{
 						IGameEvent *event = gameeventmanager->CreateEvent( "mvm_scout_marked_for_death" );
 						if ( event )

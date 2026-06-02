@@ -387,9 +387,17 @@ void JarExplode( int iEntIndex, CTFPlayer *pAttacker, CBaseEntity *pOriginalWeap
 						{
 							// These if statements are intentionally split to avoid falling through to the normal kKillEaterEvent_PeeVictims event if we're in
 							// IsPVEModeActive() but not a robot, or don't have the stun.
-							if ( pPlayer->GetTeamNumber() == TF_TEAM_PVE_INVADERS && flStun != 1.0f )
-							{
-								EconEntity_OnOwnerKillEaterEvent( dynamic_cast<CEconEntity *>( pWeapon ), pAttacker, pPlayer, kKillEaterEvent_RobotsSlowed );
+							if (!TFGameRules()->IsHL2MVMMode()) {
+								if (pPlayer->GetTeamNumber() == TF_TEAM_PVE_INVADERS && flStun != 1.0f)
+								{
+									EconEntity_OnOwnerKillEaterEvent(dynamic_cast<CEconEntity*>(pWeapon), pAttacker, pPlayer, kKillEaterEvent_RobotsSlowed);
+								}
+							}
+							else {
+								if (pPlayer->GetTeamNumber() == TF_TEAM_RED && flStun != 1.0f)
+								{
+									EconEntity_OnOwnerKillEaterEvent(dynamic_cast<CEconEntity*>(pWeapon), pAttacker, pPlayer, kKillEaterEvent_RobotsSlowed);
+								}
 							}
 						}
 						else

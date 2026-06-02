@@ -1010,9 +1010,17 @@ void CTFNavMesh::ComputeBombTargetDistance()
 	for( int i=0; i<ICaptureZoneAutoList::AutoList().Count(); ++i )
 	{
 		zone = static_cast< CCaptureZone* >( ICaptureZoneAutoList::AutoList()[i] );
-		if ( zone->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-		{
-			break;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (zone->GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+			{
+				break;
+			}
+		}
+		else {
+			if (zone->GetTeamNumber() == TF_TEAM_RED)
+			{
+				break;
+			}
 		}
 	}
 

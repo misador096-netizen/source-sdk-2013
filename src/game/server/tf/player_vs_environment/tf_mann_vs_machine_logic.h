@@ -30,7 +30,7 @@ public:
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
-
+	bool bHL2MVM;
 private:
 	CHandle< CPopulationManager > m_populationManager;
 	void InitPopulationManager( void );

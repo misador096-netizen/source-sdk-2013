@@ -541,7 +541,12 @@ void CMannVsMachineStats::RoundEvent_WaveEnd( bool bSuccess )
 	// Send a User message to Clients to send there data
 	// Tell each client their damage
 	CUtlVector< CTFPlayer * > playerVector;
-	CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+	}
+	else {
+		CollectPlayers(&playerVector, TF_TEAM_BLUE);
+	}
 	for( int i=0; i<playerVector.Count(); ++i )
 	{
 		CTFPlayer *player = playerVector[i];

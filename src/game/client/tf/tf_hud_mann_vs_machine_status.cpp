@@ -433,6 +433,12 @@ void CWaveStatusPanel::OnTick( void )
 {	
 	if ( !TFGameRules() || !TFGameRules()->IsMannVsMachineMode() )
 		return;
+	if (TFGameRules()->IsHL2MVMMode()) {
+		m_pProgressBar->SetImage("../HUD/tournament_panel_red");
+	}
+	else {
+		m_pProgressBar->SetImage("../HUD/tournament_panel_blu");
+	}
 
 	if ( !TFObjectiveResource() )
 		return;
@@ -1006,10 +1012,17 @@ bool CCurrencyStatusPanel::ShouldDraw( void )
 
 	if ( TFGameRules()->IsPVEModeActive() )
 	{
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_DEFENDERS;
+		}
+		else {
+			team = TF_TEAM_BLUE;
+		}
 		// Josh: Seems like an intentional design decision that
 		// in MvM the money panel stays up when you are dead.
 		// So I am not mirroring the IsAlive change for the non-MvM stuff.
-		if ( pLocalPlayer->GetTeamNumber() != TF_TEAM_PVE_DEFENDERS || 
+		if ( pLocalPlayer->GetTeamNumber() != team || 
 			 pLocalPlayer->GetPlayerClass()->GetClassIndex() == TF_CLASS_UNDEFINED )
 		{
 			return false;

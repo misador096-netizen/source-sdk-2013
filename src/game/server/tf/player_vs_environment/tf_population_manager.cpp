@@ -355,8 +355,12 @@ void CPopulationManager::FireGameEvent( IGameEvent *event )
 void CPopulationManager::PlayerDoneViewingLoot( const CTFPlayer* pPlayer )
 {
 	CUtlVector< const CTFPlayer * > playerVector;
-	CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
-
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+	}
+	else {
+		CollectPlayers(&playerVector, TF_TEAM_BLUE);
+	}
 	if ( m_donePlayers.Find( pPlayer ) == m_donePlayers.InvalidIndex()
 		&& playerVector.Find( pPlayer ) != playerVector.InvalidIndex() )
 	{
@@ -837,9 +841,14 @@ void CPopulationManager::ResetMap( void )
 
 		if ( FNullEnt( pPlayer->edict() ) )
 			continue;
-
-		if ( pPlayer->GetTeamNumber() != TF_TEAM_PVE_DEFENDERS )
-			continue;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (pPlayer->GetTeamNumber() != TF_TEAM_PVE_DEFENDERS)
+				continue;
+		}
+		else {
+			if (pPlayer->GetTeamNumber() != TF_TEAM_BLUE)
+				continue;
+		}
 
 		pPlayer->ResetScores();
 	}
@@ -1384,7 +1393,12 @@ void CPopulationManager::RestorePlayerCurrency ()
 	nRoundCurrency += GetStartingCurrency();
 
 	CUtlVector< CTFPlayer * > playerVector;
-	CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+	}
+	else {
+		CollectPlayers(&playerVector, TF_TEAM_BLUE);
+	}
 
 	for( int i=0; i<playerVector.Count(); ++i )
 	{
@@ -1475,7 +1489,12 @@ void CPopulationManager::RestoreCheckpoint( void )
 	// Iterate over play
 	// clear Bottles and Sentry danger and send their upgrades
 	CUtlVector< CTFPlayer * > playerVector;
-	CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+	}
+	else {
+		CollectPlayers(&playerVector, TF_TEAM_BLUE);
+	}
 	for( int i=0; i<playerVector.Count(); ++i )
 	{
 		CTFPlayer *player = playerVector[i];
@@ -1521,8 +1540,12 @@ void CPopulationManager::ClearCheckpoint( void )
 	m_checkpointSnapshot.PurgeAndDeleteElements();
 
 	CUtlVector< CTFPlayer * > playerVector;
-	CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
-
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+	}
+	else {
+		CollectPlayers(&playerVector, TF_TEAM_BLUE);
+	}
 	for( int i=0; i<playerVector.Count(); ++i )
 	{
 		CTFPlayer *player = playerVector[i];
@@ -1588,7 +1611,12 @@ void CPopulationManager::OnCurrencyCollected( int nAmount, bool bCountAsDropped,
 
 				// Award each player a respec
 				CUtlVector< CTFPlayer* > playerVector;
-				CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+				}
+				else {
+					CollectPlayers(&playerVector, TF_TEAM_BLUE);
+				}
 				FOR_EACH_VEC( playerVector, i )
 				{
 					AddRespecToPlayer( playerVector[i] );
@@ -1649,7 +1677,12 @@ void CPopulationManager::AdjustMinPlayerSpawnTime( void )
 		flTime = m_bFixedRespawnWaveTime ? m_nRespawnWaveTime : 
 			MIN( m_nRespawnWaveTime, float( iWaveNum * kMvMRespawnTimeAddPerWave ) );
 	}
-	TFGameRules()->SetTeamRespawnWaveTime( TF_TEAM_PVE_DEFENDERS, flTime );
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		TFGameRules()->SetTeamRespawnWaveTime(TF_TEAM_PVE_DEFENDERS, flTime);
+	}
+	else {
+		TFGameRules()->SetTeamRespawnWaveTime(TF_TEAM_BLUE, flTime);
+	}
 }
 
 //-------------------------------------------------------------------------
@@ -1727,10 +1760,17 @@ void CPopulationManager::GetSentryBusterDamageAndKillThreshold( int &nDamage, in
 			// Disposable sentries are not valid targets
 			if ( pObj->IsDisposableBuilding() )
 				continue;
-
-			if ( pObj->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS )
-			{
-				nSentries++;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				if (pObj->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS)
+				{
+					nSentries++;
+				}
+			}
+			else {
+				if (pObj->GetTeamNumber() == TF_TEAM_BLUE)
+				{
+					nSentries++;
+				}
 			}
 		}
 	}
@@ -2701,9 +2741,14 @@ bool CPopulationManager::HasEventChangeAttributes( const char* pszEventName ) co
 
 		if ( !player->IsConnected() )
 			continue;
-
-		if ( player->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS )	// Want everything but defenders
-			continue;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (player->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS)	// Want everything but defenders
+				continue;
+		}
+		else {
+			if (player->GetTeamNumber() == TF_TEAM_BLUE)
+				continue;
+		}
 
 		pBots->AddToTail( player );
 	}

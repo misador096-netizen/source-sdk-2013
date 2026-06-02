@@ -1469,24 +1469,48 @@ void CCaptureFlag::PickUp( CTFPlayer *pPlayer, bool bInvisible )
 	{
 		if ( nOldFlagStatus == TF_FLAGINFO_HOME )
 		{
-			if ( pPlayer->IsMiniBoss() )
-			{
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_HAS_BOMB, TF_TEAM_PVE_DEFENDERS );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				if (pPlayer->IsMiniBoss())
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_GIANT_HAS_BOMB, TF_TEAM_PVE_DEFENDERS);
+				}
+				else
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_FIRST_BOMB_PICKUP, TF_TEAM_PVE_DEFENDERS);
+				}
 			}
-			else
-			{
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_FIRST_BOMB_PICKUP, TF_TEAM_PVE_DEFENDERS );
+			else {
+				if (pPlayer->IsMiniBoss())
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_GIANT_HAS_BOMB, TF_TEAM_BLUE);
+				}
+				else
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_FIRST_BOMB_PICKUP, TF_TEAM_BLUE);
+				}
 			}
 		}
 		else
 		{
-			if ( pPlayer->IsMiniBoss() )
-			{
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_HAS_BOMB, TF_TEAM_PVE_DEFENDERS );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				if (pPlayer->IsMiniBoss())
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_GIANT_HAS_BOMB, TF_TEAM_PVE_DEFENDERS);
+				}
+				else
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_PICKUP, TF_TEAM_PVE_DEFENDERS);
+				}
 			}
-			else
-			{
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_BOMB_PICKUP, TF_TEAM_PVE_DEFENDERS );
+			else {
+				if (pPlayer->IsMiniBoss())
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_GIANT_HAS_BOMB, TF_TEAM_BLUE);
+				}
+				else
+				{
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_PICKUP, TF_TEAM_BLUE);
+				}
 			}
 		}
 	}
@@ -2134,7 +2158,12 @@ void CCaptureFlag::Drop( CTFPlayer *pPlayer, bool bVisible,  bool bThrown /*= fa
 
 	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 	{
-		TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_BOMB_DROPPED, TF_TEAM_PVE_DEFENDERS );
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_DROPPED, TF_TEAM_PVE_DEFENDERS);
+		}
+		else {
+			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_DROPPED, TF_TEAM_BLUE);
+		}
 	}
 #endif
 }

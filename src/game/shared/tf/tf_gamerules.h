@@ -604,6 +604,7 @@ bool IsCreepWaveMode( void ) const;
 #endif
 
 	bool IsMannVsMachineMode( void ) const { return m_bPlayingMannVsMachine; }
+	bool IsHL2MVMMode(void) const { return m_bPlayingHL2MVM; }
 
 	void SetMannVsMachineAlarmStatus( bool bStatus ){ m_bMannVsMachineAlarmStatus.Set( bStatus ); }
 	bool GetMannVsMachineAlarmStatus( void ){ return m_bMannVsMachineAlarmStatus; }
@@ -1032,6 +1033,7 @@ public:
 	void MatchSummaryEnd( void );
 
 	int GetTeamAssignmentOverride( CTFPlayer *pTFPlayer, int iDesiredTeam, bool bAutoBalance = false );
+	
 private:
 
 	void ChooseNextMapVoteOptions();
@@ -1183,6 +1185,7 @@ private:
 	CNetworkVar( bool, m_bPlayingSpecialDeliveryMode );
 
 	CNetworkVar( bool, m_bPlayingMannVsMachine );
+	CNetworkVar(bool, m_bPlayingHL2MVM);
 	CNetworkVar( bool, m_bMannVsMachineAlarmStatus );
 	CNetworkVar( bool, m_bHaveMinPlayersToEnableReady );
 

@@ -2985,8 +2985,14 @@ void CTFMedigunShield::ShieldTouch( CBaseEntity *pOther )
 		CTFPlayer *pTFOwner = ToTFPlayer( GetOwnerEntity() );
 		if ( !pTFOwner )
 			return;
-
-		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && ( pTFOwner->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_INVADERS;
+		}
+		else {
+			team = TF_TEAM_RED;
+		}
+		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && ( pTFOwner->GetTeamNumber() == team ) )
 			return;
 
 		int nShieldLevel = 0;

@@ -248,8 +248,12 @@ void CTFBotMissionSuicideBomber::Detonate( CTFBot *me )
 	{
 		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 		{
-			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_SENTRY_BUSTER_DOWN, TF_TEAM_PVE_DEFENDERS );
-
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_SENTRY_BUSTER_DOWN, TF_TEAM_PVE_DEFENDERS);
+			}
+			else {
+				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_SENTRY_BUSTER_DOWN, TF_TEAM_BLUE);
+			}
 			// ACHIEVEMENT_TF_MVM_KILL_SENTRY_BUSTER
 			for ( int iDamager = 0 ; iDamager < MAX_ACHIEVEMENT_HISTORY_SLOTS ; iDamager ++ )
 			{	

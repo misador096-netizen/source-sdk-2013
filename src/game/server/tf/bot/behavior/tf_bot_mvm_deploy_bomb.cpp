@@ -63,7 +63,12 @@ ActionResult< CTFBot > CTFBotMvMDeployBomb::Update( CTFBot *me, float interval )
 		{
 			// Look for players that pushed me away and send an event
 			CUtlVector<CTFPlayer *> playerVector;
-			CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+			}
+			else {
+				CollectPlayers(&playerVector, TF_TEAM_BLUE);
+			}
 			FOR_EACH_VEC( playerVector, i )
 			{
 				CTFPlayer *pPlayer = playerVector[i];

@@ -173,8 +173,14 @@ ActionResult< CTFBot >	CTFBotMainAction::Update( CTFBot *me, float interval )
 			}
 		}
 	}
-
-	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == team )
 	{
 		// infinite ammo
 		// me->GiveAmmo( 100, TF_AMMO_PRIMARY, true );

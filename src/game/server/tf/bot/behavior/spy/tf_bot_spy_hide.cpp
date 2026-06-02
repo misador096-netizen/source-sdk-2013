@@ -70,7 +70,14 @@ ActionResult< CTFBot >	CTFBotSpyHide::Update( CTFBot *me, float interval )
 	if ( m_talkTimer.IsElapsed() )
 	{
 		m_talkTimer.Start( RandomFloat( 5.0f, 10.0f ) );
-		if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_INVADERS;
+		}
+		else {
+			team = TF_TEAM_RED;
+		}
+		if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == team )
 		{
 			me->EmitSound( "Spy.MVM_TeaseVictim" );
 		}

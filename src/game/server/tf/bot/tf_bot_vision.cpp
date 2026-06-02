@@ -109,8 +109,14 @@ void CTFBotVision::UpdatePotentiallyVisibleNPCVector( void )
 
 		// collect list of active buildings
 		m_potentiallyVisibleNPCVector.RemoveAll();
-
-		bool bShouldSeeTeleporter = !TFGameRules()->IsMannVsMachineMode() || GetBot()->GetEntity()->GetTeamNumber() != TF_TEAM_PVE_INVADERS;
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_INVADERS;
+		}
+		else {
+			team = TF_TEAM_RED;
+		}
+		bool bShouldSeeTeleporter = !TFGameRules()->IsMannVsMachineMode() || GetBot()->GetEntity()->GetTeamNumber() != team;
 		for ( int i=0; i<IBaseObjectAutoList::AutoList().Count(); ++i )
 		{
 			CBaseObject* pObj = static_cast< CBaseObject* >( IBaseObjectAutoList::AutoList()[i] );

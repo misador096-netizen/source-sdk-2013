@@ -266,9 +266,17 @@ void CObjectTeleporter::Spawn()
 //-----------------------------------------------------------------------------
 void CObjectTeleporter::UpdateOnRemove()
 {
-	if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-	{
-		TFObjectiveResource()->DecrementTeleporterCount();
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+		{
+			TFObjectiveResource()->DecrementTeleporterCount();
+		}
+	}
+	else{
+		if (GetTeamNumber() == TF_TEAM_RED)
+		{
+			TFObjectiveResource()->DecrementTeleporterCount();
+		}
 	}
 
 	BaseClass::UpdateOnRemove();
@@ -429,7 +437,22 @@ void CObjectTeleporter::OnGoActive( void )
 	SetTouch( &CObjectTeleporter::TeleporterTouch );
 
 	SetState( TELEPORTER_STATE_IDLE );
+	if (TFGameRules()->IsHL2MVMMode() && GetTeamNumber() == TF_TEAM_RED && !IsEntrance() && !GetBuilder()->IsBot()) {
+		CUtlStringList spawnPoints;
+		for (int i = 0; i < ITFTeamSpawnAutoList::AutoList().Count(); ++i)
+		{
+			CTFTeamSpawn* pTFSpawn = static_cast<CTFTeamSpawn*>(ITFTeamSpawnAutoList::AutoList()[i]);
+			if (pTFSpawn->GetTeamNumber() == TF_TEAM_RED)
+			{
+				char szName[MAX_PATH];
+				V_strcpy_safe(szName, pTFSpawn->GetEntityNameAsCStr());
+				spawnPoints.CopyAndAddToTail(szName);
+			}
+		}
+		SetTeleportWhere(spawnPoints);
 
+		EmitSound("MVM.Robot_Teleporter_Activate");
+	}
 	BaseClass::OnGoActive();
 
 	SetPlaybackRate( 0.0f );
@@ -482,6 +505,7 @@ void CObjectTeleporter::Precache()
 	PrecacheScriptSound( "Building_Teleporter.SpinLevel1" );
 	PrecacheScriptSound( "Building_Teleporter.SpinLevel2" );
 	PrecacheScriptSound( "Building_Teleporter.SpinLevel3" );
+	PrecacheScriptSound("MVM.Robot_Teleporter_Activate");
 
 	PrecacheParticleSystem( "teleporter_red_charged" );
 	PrecacheParticleSystem( "teleporter_blue_charged" );
@@ -501,6 +525,7 @@ void CObjectTeleporter::Precache()
 	PrecacheParticleSystem( "player_sparkles_blue" );
 	PrecacheParticleSystem( "teleportedin_red" );
 	PrecacheParticleSystem( "teleportedin_blue" );
+	PrecacheParticleSystem("teleporter_mvm_bot_persist");
 
 	PrecacheParticleSystem( "teleporter_arms_circle_red_blink" );
 	PrecacheParticleSystem( "teleporter_arms_circle_blue_blink" );
@@ -887,7 +912,14 @@ void CObjectTeleporter::DeterminePlaybackRate( void )
 		}
 
 		// Always spin when the teleporter is done building
-		if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_INVADERS;
+		}
+		else {
+			team = TF_TEAM_RED;
+		}
+		if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == team )
 		{
 			flPlaybackRate = 1.f;
 		}
@@ -1193,10 +1225,17 @@ void CObjectTeleporter::TeleporterThink( void )
 void CObjectTeleporter::FinishedBuilding( void )
 {
 	BaseClass::FinishedBuilding();
-
-	if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-	{
-		TFObjectiveResource()->IncrementTeleporterCount();
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+		{
+			TFObjectiveResource()->IncrementTeleporterCount();
+		}
+	}
+	else {
+		if (GetTeamNumber() == TF_TEAM_RED)
+		{
+			TFObjectiveResource()->IncrementTeleporterCount();
+		}
 	}
 
 	SetActivity( ACT_OBJ_RUNNING );
@@ -1418,7 +1457,10 @@ bool CObjectTeleporter::InputWrenchHit( CTFPlayer *pPlayer, CTFWrench *pWrench, 
 void CObjectTeleporter::MakeCarriedObject( CTFPlayer *pCarrier )
 {
 	ShowDirectionArrow( false );
-
+	if (GetBuilder() && GetBuilder()->GetTeamNumber() == TF_TEAM_RED && !GetBuilder()->IsBot() && !IsEntrance() && TFGameRules() && TFGameRules()->IsHL2MVMMode())
+	{
+		m_teleportWhereName.RemoveAll();
+	}
 	BaseClass::MakeCarriedObject( pCarrier );
 }
 

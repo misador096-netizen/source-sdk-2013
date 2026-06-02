@@ -63,7 +63,12 @@ ActionResult< CTFBot > CTFBotMissionDestroySentries::Update( CTFBot *me, float i
 
 			if ( TFGameRules() && TFGameRules()->IsPVEModeActive() )
 			{
-				iTeam = TF_TEAM_PVE_DEFENDERS;
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					iTeam = TF_TEAM_PVE_DEFENDERS;
+				}
+				else {
+					iTeam = TF_TEAM_BLUE;
+				}
 			}
 
 			m_goalSentry = TFGameRules()->FindSentryGunWithMostKills( iTeam );

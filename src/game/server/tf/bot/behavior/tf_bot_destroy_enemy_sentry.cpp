@@ -192,9 +192,17 @@ bool CTFBotDestroyEnemySentry::IsPossible( CTFBot *me )
 
 	if ( TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( me->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-		{
-			return false;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (me->GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+			{
+				return false;
+			}
+		}
+		else {
+			if (me->GetTeamNumber() == TF_TEAM_RED)
+			{
+				return false;
+			}
 		}
 	}
 

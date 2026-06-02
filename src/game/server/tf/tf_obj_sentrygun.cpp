@@ -303,12 +303,23 @@ void CObjectSentrygun::SentryThink( void )
 	}
 
 	// infinite ammo for enemy team in MvM mode
-	if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-	{
-		m_iAmmoRockets = SENTRYGUN_MAX_ROCKETS;
-		m_iMaxAmmoRockets = SENTRYGUN_MAX_ROCKETS;
-		m_iAmmoShells = SENTRYGUN_MAX_SHELLS_3;
-		m_iMaxAmmoShells = SENTRYGUN_MAX_SHELLS_3;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+		{
+			m_iAmmoRockets = SENTRYGUN_MAX_ROCKETS;
+			m_iMaxAmmoRockets = SENTRYGUN_MAX_ROCKETS;
+			m_iAmmoShells = SENTRYGUN_MAX_SHELLS_3;
+			m_iMaxAmmoShells = SENTRYGUN_MAX_SHELLS_3;
+		}
+	}
+	else {
+		if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_RED)
+		{
+			m_iAmmoRockets = SENTRYGUN_MAX_ROCKETS;
+			m_iMaxAmmoRockets = SENTRYGUN_MAX_ROCKETS;
+			m_iAmmoShells = SENTRYGUN_MAX_SHELLS_3;
+			m_iMaxAmmoShells = SENTRYGUN_MAX_SHELLS_3;
+		}
 	}
 }
 

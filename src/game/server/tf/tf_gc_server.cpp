@@ -3269,12 +3269,22 @@ void CTFGCServerSystem::UpdateConnectedPlayersAndServerInfo( CMsgGameServerMatch
 		case GR_STATE_STALEMATE:
 			if ( TFGameRules()->IsMannVsMachineMode() )
 			{
-				// *Currently* can only end in victory (or dissolves because everyone leaves)
-				if (
-					TFGameRules()->State_Get() == GR_STATE_TEAM_WIN
-					&& TFGameRules()->GetWinningTeam() == TF_TEAM_PVE_DEFENDERS )
-				{
-					gcState = TF_GC_GAMESTATE_POST_GAME;
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					// *Currently* can only end in victory (or dissolves because everyone leaves)
+					if (
+						TFGameRules()->State_Get() == GR_STATE_TEAM_WIN
+						&& TFGameRules()->GetWinningTeam() == TF_TEAM_PVE_DEFENDERS)
+					{
+						gcState = TF_GC_GAMESTATE_POST_GAME;
+					}
+				}
+				else {
+					if (
+						TFGameRules()->State_Get() == GR_STATE_TEAM_WIN
+						&& TFGameRules()->GetWinningTeam() == TF_TEAM_BLUE)
+					{
+						gcState = TF_GC_GAMESTATE_POST_GAME;
+					}
 				}
 			}
 			else if ( TFGameRules()->IsCompetitiveMode() )

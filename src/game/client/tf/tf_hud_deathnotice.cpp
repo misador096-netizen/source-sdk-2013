@@ -711,9 +711,17 @@ bool CTFHudDeathNotice::ShouldShowDeathNotice( IGameEvent *event )
 			 iLocalPlayerIndex != engine->GetPlayerForUserID( event->GetInt( "assister" ) ) )
 		{
 			C_TFPlayer* pVictim = ToTFPlayer( UTIL_PlayerByIndex( engine->GetPlayerForUserID( event->GetInt( "userid" ) ) ) );
-			if ( pVictim && pVictim->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-			{
-				return false;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				if (pVictim && pVictim->GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+				{
+					return false;
+				}
+			}
+			else {
+				if (pVictim && pVictim->GetTeamNumber() == TF_TEAM_RED)
+				{
+					return false;
+				}
 			}
 		}
 	}

@@ -132,7 +132,12 @@ bool CTFBotDeliverFlag::UpgradeOverTime( CTFBot *me )
 						TFObjectiveResource()->SetFlagCarrierUpgradeLevel( 1 );
 						TFObjectiveResource()->SetBaseMvMBombUpgradeTime( gpGlobals->curtime );
 						TFObjectiveResource()->SetNextMvMBombUpgradeTime( gpGlobals->curtime + m_upgradeTimer.GetRemainingTime() );
-						TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE1, TF_TEAM_PVE_DEFENDERS );
+						if (!TFGameRules()->IsHL2MVMMode()) {
+							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE1, TF_TEAM_PVE_DEFENDERS);
+						}
+						else {
+							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE1, TF_TEAM_BLUE);
+						}
 						DispatchParticleEffect( "mvm_levelup1", PATTACH_POINT_FOLLOW, me, "head" );
 					}
 					return true;
@@ -163,7 +168,12 @@ bool CTFBotDeliverFlag::UpgradeOverTime( CTFBot *me )
 						TFObjectiveResource()->SetFlagCarrierUpgradeLevel( 2 );
 						TFObjectiveResource()->SetBaseMvMBombUpgradeTime( gpGlobals->curtime );
 						TFObjectiveResource()->SetNextMvMBombUpgradeTime( gpGlobals->curtime + m_upgradeTimer.GetRemainingTime() );
-						TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE2, TF_TEAM_PVE_DEFENDERS );
+						if (!TFGameRules()->IsHL2MVMMode()) {
+							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE2, TF_TEAM_PVE_DEFENDERS);
+						}
+						else {
+							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE2, TF_TEAM_BLUE);
+						}
 						DispatchParticleEffect( "mvm_levelup2", PATTACH_POINT_FOLLOW, me, "head" );
 					}
 					return true;
@@ -180,7 +190,12 @@ bool CTFBotDeliverFlag::UpgradeOverTime( CTFBot *me )
 						TFObjectiveResource()->SetFlagCarrierUpgradeLevel( 3 );
 						TFObjectiveResource()->SetBaseMvMBombUpgradeTime( -1 );
 						TFObjectiveResource()->SetNextMvMBombUpgradeTime( -1 );
-						TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE3, TF_TEAM_PVE_DEFENDERS );
+						if (!TFGameRules()->IsHL2MVMMode()) {
+							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE3, TF_TEAM_PVE_DEFENDERS);
+						}
+						else {
+							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_BOMB_CARRIER_UPGRADE3, TF_TEAM_BLUE);
+						}
 						DispatchParticleEffect( "mvm_levelup3", PATTACH_POINT_FOLLOW, me, "head" );
 					}
 					return true;
@@ -249,7 +264,12 @@ ActionResult< CTFBot > CTFBotDeliverFlag::Update( CTFBot *me, float interval )
 
 			// Look for players that helped with the reset and send an event
 			CUtlVector<CTFPlayer *> playerVector;
-			CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+			}
+			else {
+				CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+			}
 			FOR_EACH_VEC( playerVector, i )
 			{
 				CTFPlayer *pPlayer = playerVector[i];

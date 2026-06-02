@@ -426,7 +426,14 @@ bool CTFWeaponBaseMelee::DoSwingTraceInternal( trace_t &trace, bool bCleave, CUt
 
 	// In MvM, melee hits from the robot team wont hit teammates to ensure mobs of melee bots don't 
 	// swarm so tightly they hit each other and no-one else
-	bool bDontHitTeammates = pPlayer->GetTeamNumber() == TF_TEAM_PVE_INVADERS && TFGameRules()->IsMannVsMachineMode();
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	bool bDontHitTeammates = pPlayer->GetTeamNumber() == team && TFGameRules()->IsMannVsMachineMode();
 	CTraceFilterIgnoreTeammates ignoreTeammatesFilter( pPlayer, COLLISION_GROUP_NONE, pPlayer->GetTeamNumber() );
 
 	if ( bCleave )
@@ -572,7 +579,14 @@ bool CTFWeaponBaseMelee::OnSwingHit( trace_t &trace )
 		// handle hitting a robot	
 		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 		{
-			if ( pTargetPlayer  && pTargetPlayer->GetTeamNumber() == TF_TEAM_PVE_INVADERS && !pTargetPlayer->IsPlayer() )
+			int team;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				team = TF_TEAM_PVE_INVADERS;
+			}
+			else {
+				team = TF_TEAM_RED;
+			}
+			if ( pTargetPlayer  && pTargetPlayer->GetTeamNumber() == team && !pTargetPlayer->IsPlayer() )
 			{
 				bPlayMvMHitOnly = true;
 

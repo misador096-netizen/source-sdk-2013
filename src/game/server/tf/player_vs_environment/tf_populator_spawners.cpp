@@ -1037,7 +1037,12 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 						int targetTeam = TEAM_SPECTATOR;
 						if ( iTeam == 1 )
 						{
-							targetTeam = TF_TEAM_PVE_INVADERS;
+							if (!TFGameRules()->IsHL2MVMMode()) {
+								targetTeam = TF_TEAM_PVE_INVADERS;
+							}
+							else {
+								targetTeam = TF_TEAM_RED;
+							}
 						}
 
 						FOR_EACH_VEC( botVector, iBot )
@@ -1107,9 +1112,12 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 
 		int team = TF_TEAM_RED;
 
-		if ( TFGameRules()->IsMannVsMachineMode() )
+		if ( TFGameRules()->IsMannVsMachineMode() && !TFGameRules()->IsHL2MVMMode())
 		{
 			team = TF_TEAM_PVE_INVADERS;
+		}
+		if (TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_RED;
 		}
 
 		newBot->ChangeTeam( team, false, true );
@@ -1171,8 +1179,12 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 			if ( m_class == TF_CLASS_SPY )
 			{
 				CUtlVector< CTFPlayer * > playerVector;
-				CollectPlayers( &playerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS );
-
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					CollectPlayers(&playerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS);
+				}
+				else {
+					CollectPlayers(&playerVector, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS);
+				}
 				int spyCount = 0;
 				for( int i=0; i<playerVector.Count(); ++i )
 				{
@@ -1207,7 +1219,7 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 		newBot->StartIdleSound();
 
 		// Add our items first, they'll get replaced below by the normal MvM items if any are needed
-		if ( TFGameRules()->IsMannVsMachineMode() && ( newBot->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+		if ( TFGameRules()->IsMannVsMachineMode() && !TFGameRules()->IsHL2MVMMode() && ( newBot->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
 		{
 			// Apply the Rome 2 promo items to each bot. They'll be 
 			// filtered out for clients that do not have Romevision.
@@ -1222,7 +1234,21 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 				newBot->AddItem( g_szRomePromoItems_Misc[m_class] );
 			}
 		}
-
+		if (TFGameRules()->IsHL2MVMMode() && (newBot->GetTeamNumber() == TF_TEAM_RED))
+		{
+			// Apply the Rome 2 promo items to each bot. They'll be 
+			// filtered out for clients that do not have Romevision.
+			CMissionPopulator* pMission = dynamic_cast<CMissionPopulator*>(GetPopulator());
+			if (pMission && (pMission->GetMissionType() == CTFBot::MISSION_DESTROY_SENTRIES))
+			{
+				newBot->AddItem("tw_sentrybuster");
+			}
+			else
+			{
+				newBot->AddItem(g_szRomePromoItems_Hat[m_class]);
+				newBot->AddItem(g_szRomePromoItems_Misc[m_class]);
+			}
+		}
 		// apply default attributes
 		const CTFBot::EventChangeAttributes_t* pEventChangeAttributes = newBot->GetEventChangeAttributes( g_pPopulationManager->GetDefaultEventChangeAttributesName() );
 		if ( !pEventChangeAttributes )
@@ -1291,7 +1317,12 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 		{
 			if ( newBot->IsMiniBoss() )
 			{
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_CALLOUT, TF_TEAM_PVE_DEFENDERS );
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_GIANT_CALLOUT, TF_TEAM_PVE_DEFENDERS);
+				}
+				else {
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_GIANT_CALLOUT, TF_TEAM_BLUE);
+				}
 			}
 		}
 

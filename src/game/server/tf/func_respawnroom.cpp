@@ -112,9 +112,17 @@ void CFuncRespawnRoom::RespawnRoomTouch(CBaseEntity *pOther)
 {
 	if ( TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-		{
-			return;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+			{
+				return;
+			}
+		}
+		else {
+			if (GetTeamNumber() == TF_TEAM_RED)
+			{
+				return;
+			}
 		}
 	}
 

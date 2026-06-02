@@ -546,12 +546,18 @@ void CTFBaseRocket::CheckForStunOnImpact( CTFPlayer* pTarget )
 
 	pTarget->SetAbsVelocity( vec3_origin );
 	pTarget->m_Shared.StunPlayer( flStunTime, flStunAmount, TF_STUN_MOVEMENT | TF_STUN_NO_EFFECTS, pAttacker );
-
-	if ( TFGameRules()->IsMannVsMachineMode() && pTarget->IsBot() && ( pAttacker->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS ) )
-	{
-		pAttacker->AwardAchievement( ACHIEVEMENT_TF_MVM_ROCKET_SPECIALIST_STUN_GRIND );
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (TFGameRules()->IsMannVsMachineMode() && pTarget->IsBot() && (pAttacker->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS))
+		{
+			pAttacker->AwardAchievement(ACHIEVEMENT_TF_MVM_ROCKET_SPECIALIST_STUN_GRIND);
+		}
 	}
-
+	else {
+		if (TFGameRules()->IsMannVsMachineMode() && pTarget->IsBot() && (pAttacker->GetTeamNumber() == TF_TEAM_BLUE))
+		{
+			pAttacker->AwardAchievement(ACHIEVEMENT_TF_MVM_ROCKET_SPECIALIST_STUN_GRIND);
+		}
+	}
 
 	// Effect
 	CPVSFilter filter( GetAbsOrigin() );

@@ -280,9 +280,17 @@ void CTFWrench::Detach( void )
 		// In MvM mode, leave engineer's buildings after he dies
 		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 		{
-			if ( pPlayer->GetTeamNumber() != TF_TEAM_PVE_DEFENDERS )
-			{
-				bDetonateObjects = false;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				if (pPlayer->GetTeamNumber() != TF_TEAM_PVE_DEFENDERS)
+				{
+					bDetonateObjects = false;
+				}
+			}
+			else {
+				if (pPlayer->GetTeamNumber() != TF_TEAM_BLUE)
+				{
+					bDetonateObjects = false;
+				}
 			}
 		}
 

@@ -52,6 +52,9 @@ public:
 	void StartBuildingEffects( void );
 	void StopBuildingEffects( void );
 
+	void StartBeamEffects(void);
+	void StopBeamEffects(void);
+
 	virtual void SetInvisibilityLevel( float flValue );
 	void UpdateTeleporterEffects( void );
 
@@ -84,6 +87,7 @@ private:
 
 	HPARTICLEFFECT	m_hBuildingLeftArmEffect;
 	HPARTICLEFFECT	m_hBuildingRightArmEffect;
+	HPARTICLEFFECT	m_hBuildingBeamEffect;
 
 	CSoundPatch		*m_pSpinSound;
 

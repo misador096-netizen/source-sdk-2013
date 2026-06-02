@@ -1098,6 +1098,7 @@ ConVar tf_gamemode_tc ( "tf_gamemode_tc", "0", FCVAR_REPLICATED | FCVAR_NOTIFY |
 ConVar tf_beta_content ( "tf_beta_content", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DEVELOPMENTONLY );
 ConVar tf_gamemode_payload ( "tf_gamemode_payload", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DEVELOPMENTONLY );
 ConVar tf_gamemode_mvm ( "tf_gamemode_mvm", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DEVELOPMENTONLY );
+ConVar tf_gamemode_hl2mvm("tf_gamemode_hl2mvm", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DEVELOPMENTONLY);
 ConVar tf_gamemode_passtime ( "tf_gamemode_passtime", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DEVELOPMENTONLY );
 ConVar tf_gamemode_misc ( "tf_gamemode_misc", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_DEVELOPMENTONLY );
 
@@ -1445,6 +1446,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CTFGameRules, DT_TFGameRules )
 
 	RecvPropEHandle( RECVINFO( m_itHandle ) ),
 	RecvPropBool( RECVINFO( m_bPlayingMannVsMachine ) ),
+	RecvPropBool(RECVINFO(m_bPlayingHL2MVM)),
 	RecvPropEHandle( RECVINFO( m_hBirthdayPlayer ) ),
 
 	RecvPropInt( RECVINFO( m_nBossHealth ) ),
@@ -1515,6 +1517,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CTFGameRules, DT_TFGameRules )
 
 	SendPropEHandle( SENDINFO( m_itHandle ) ),
 	SendPropBool( SENDINFO( m_bPlayingMannVsMachine ) ),
+	SendPropBool(SENDINFO(m_bPlayingHL2MVM)),
 	SendPropEHandle( SENDINFO( m_hBirthdayPlayer ) ),
 
 	SendPropInt( SENDINFO( m_nBossHealth ) ),
@@ -2129,7 +2132,12 @@ bool CTFGameRules::IsPVEModeControlled( CBaseEntity *who ) const
 #ifdef GAME_DLL
 	if ( IsMannVsMachineMode() )
 	{
-		return who->GetTeamNumber() == TF_TEAM_PVE_INVADERS ? true : false;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			return who->GetTeamNumber() == TF_TEAM_PVE_INVADERS ? true : false;
+		}
+		else {
+			return who->GetTeamNumber() == TF_TEAM_RED ? true : false;
+		}
 	}
 
 	if ( IsPVEModeActive() )
@@ -3380,6 +3388,7 @@ CTFGameRules::CTFGameRules()
 	m_nGameType.Set( TF_GAMETYPE_UNDEFINED );
 
 	m_bPlayingMannVsMachine.Set( false );
+	m_bPlayingHL2MVM.Set(false);
 	m_bMannVsMachineAlarmStatus.Set( false );
 	m_bBountyModeEnabled.Set( false );
 
@@ -4225,6 +4234,7 @@ void CTFGameRules::Activate()
 	tf_gamemode_sd.SetValue( 0 );
 	tf_gamemode_payload.SetValue( 0 );
 	tf_gamemode_mvm.SetValue( 0 );
+	tf_gamemode_hl2mvm.SetValue(0);
 	tf_gamemode_rd.SetValue( 0 );
 	tf_gamemode_pd.SetValue( 0 );
 	tf_gamemode_tc.SetValue( 0 );
@@ -4239,6 +4249,7 @@ void CTFGameRules::Activate()
 	tf_gamemode_boss_battle.SetValue( 0 );
 #endif
 	m_bPlayingMannVsMachine.Set( false );
+	m_bPlayingHL2MVM.Set(false);
 	m_bBountyModeEnabled.Set( false );
 	m_nCurrencyAccumulator = 0;
 	m_iCurrencyPool = 0;
@@ -4336,6 +4347,10 @@ void CTFGameRules::Activate()
 		m_bPlayingMannVsMachine.Set( true );
 		tf_gamemode_mvm.SetValue( 1 );
 		m_nGameType.Set( TF_GAMETYPE_MVM );
+		if (pMannVsMachineLogic->bHL2MVM) {
+			m_bPlayingHL2MVM.Set(true);
+			tf_gamemode_hl2mvm.SetValue(1);
+		}
 	}
 	else if ( MapHasPrefix( STRING( gpGlobals->mapname ), "sd_" ) )
 	{
@@ -11605,7 +11620,14 @@ void CTFGameRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &in
 
 		if ( pAttackerEconWeapon )
 		{
-			if ( !( IsPVEModeActive() && pTFPlayerVictim->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+			int team;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				team = TF_TEAM_PVE_INVADERS;
+			}
+			else {
+				team = TF_TEAM_RED;
+			}
+			if ( !( IsPVEModeActive() && pTFPlayerVictim->GetTeamNumber() == team ) )
 			{
 				// Any type of non-robot kill!
 				EconEntity_OnOwnerKillEaterEvent( pAttackerEconWeapon, pTFPlayerScorer, pTFPlayerVictim, eKillEaterEvent );
@@ -11810,7 +11832,7 @@ void CTFGameRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &in
 			}
 			else
 			{
-				Assert( pTFPlayerVictim->GetTeamNumber() == TF_TEAM_PVE_INVADERS );
+				Assert( pTFPlayerVictim->GetTeamNumber() == team );
 
 				// Optional: also track kills where the victim was a robot in MvM
 				EconEntity_OnOwnerKillEaterEvent( pAttackerEconWeapon, pTFPlayerScorer, pTFPlayerVictim, kKillEaterEvent_RobotsDestroyed );
@@ -14949,7 +14971,12 @@ int CTFGameRules::DistributeCurrencyAmount( int nAmount, CTFPlayer *pTFPlayer /*
 
 		if ( IsMannVsMachineMode() )
 		{
-			CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+			}
+			else {
+				CollectPlayers(&playerVector, TF_TEAM_BLUE);
+			}
 		}
 
 		// Money
@@ -18309,11 +18336,18 @@ void CTFGameRules::FireGameEvent( IGameEvent *event )
 				
 				// make sure all invaders are removed
 				CUtlVector< CTFPlayer * > playerVector;
-				CollectPlayers( &playerVector, TF_TEAM_PVE_INVADERS );
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					CollectPlayers(&playerVector, TF_TEAM_PVE_INVADERS);
+				}
+				else {
+					CollectPlayers(&playerVector, TF_TEAM_RED);
+				}
 
 				for( int i=0; i<playerVector.Count(); ++i )
 				{
-					playerVector[i]->ChangeTeam( TEAM_SPECTATOR, false, true );
+					if (playerVector[i]->IsBot()) {
+						playerVector[i]->ChangeTeam(TEAM_SPECTATOR, false, true);
+					}
 				}
 			}
 		}
@@ -18700,7 +18734,14 @@ bool CTFGameRules::HasPassedMinRespawnTime( CBasePlayer *pPlayer )
 bool CTFGameRules::ShouldRespawnQuickly( CBasePlayer *pPlayer )
 {
 	CTFPlayer *pTFPlayer = ToTFPlayer( pPlayer );
-	if ( IsPVEModeActive() && pTFPlayer && pTFPlayer->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS && pTFPlayer->GetPlayerClass()->GetClassIndex() == TF_CLASS_SCOUT )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_DEFENDERS;
+	}
+	else {
+		team = TF_TEAM_BLUE;
+	}
+	if ( IsPVEModeActive() && pTFPlayer && pTFPlayer->GetTeamNumber() == team && pTFPlayer->GetPlayerClass()->GetClassIndex() == TF_CLASS_SCOUT )
 	{
 		return true;
 	}
@@ -18749,6 +18790,7 @@ convar_tags_t convars_to_check_for_tags[] =
 	{ "tf_gamemode_ctf", "ctf", NULL },
 	{ "tf_gamemode_sd", "sd", NULL },
 	{ "tf_gamemode_mvm", "mvm", NULL },
+	{ "tf_gamemode_hl2mvm", "hl2mvm", NULL },
 	{ "tf_gamemode_payload", "payload", NULL },
 	{ "tf_gamemode_rd",	"rd", NULL },
 	{ "tf_gamemode_pd",	"pd", NULL },
@@ -20711,21 +20753,41 @@ void CTFGameRules::BetweenRounds_Start( void )
 		mp_tournament.SetValue( true );
 		RestartTournament();
 		SetInStopWatch( false );
-
-		char szName[16];
-		Q_strncpy( szName, "ROBOTS", MAX_TEAMNAME_STRING + 1 );
-		mp_tournament_blueteamname.SetValue( szName );
-		Q_strncpy( szName, "MANNCO", MAX_TEAMNAME_STRING + 1 );
-		mp_tournament_redteamname.SetValue( szName );
-		SetTeamReadyState( true, TF_TEAM_PVE_INVADERS );
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			char szName[16];
+			Q_strncpy(szName, "ROBOTS", MAX_TEAMNAME_STRING + 1);
+			mp_tournament_blueteamname.SetValue(szName);
+			Q_strncpy(szName, "MANNCO", MAX_TEAMNAME_STRING + 1);
+			mp_tournament_redteamname.SetValue(szName);
+			SetTeamReadyState(true, TF_TEAM_PVE_INVADERS);
+		}
+		else {
+			char szName[16];
+			Q_strncpy(szName, "THE COMBINE", MAX_TEAMNAME_STRING + 1);
+			mp_tournament_blueteamname.SetValue(szName);
+			Q_strncpy(szName, "RED + ROBOTS", MAX_TEAMNAME_STRING + 1);
+			mp_tournament_redteamname.SetValue(szName);
+			SetTeamReadyState(true, TF_TEAM_PVE_INVADERS);
+		}
 	}
-
-	for ( int i = 0; i < IBaseObjectAutoList::AutoList().Count(); ++i )
-	{
-		CBaseObject *pObj = static_cast<CBaseObject*>( IBaseObjectAutoList::AutoList()[i] );
-		if ( pObj->IsDisposableBuilding() || pObj->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		for (int i = 0; i < IBaseObjectAutoList::AutoList().Count(); ++i)
 		{
-			pObj->DetonateObject();
+			CBaseObject* pObj = static_cast<CBaseObject*>(IBaseObjectAutoList::AutoList()[i]);
+			if (pObj->IsDisposableBuilding() || pObj->GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+			{
+				pObj->DetonateObject();
+			}
+		}
+	}
+	else {
+		for (int i = 0; i < IBaseObjectAutoList::AutoList().Count(); ++i)
+		{
+			CBaseObject* pObj = static_cast<CBaseObject*>(IBaseObjectAutoList::AutoList()[i]);
+			if (pObj->IsDisposableBuilding() || pObj->GetTeamNumber() == TF_TEAM_RED)
+			{
+				pObj->DetonateObject();
+			}
 		}
 	}
 

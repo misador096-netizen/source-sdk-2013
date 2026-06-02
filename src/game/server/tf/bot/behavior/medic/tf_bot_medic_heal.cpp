@@ -911,8 +911,14 @@ void CTFBotMedicHeal::ComputeFollowPosition( CTFBot *me )
 	}
 
 	bool isExposed;
-
-	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == team )
 	{
 		// robot medics in MvM don't care if the enemy sees them
 		isExposed = false;

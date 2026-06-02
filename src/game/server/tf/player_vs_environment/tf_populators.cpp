@@ -98,9 +98,14 @@ SpawnLocationResult DoTeleporterOverride( CBaseEntity *spawnEnt, Vector& vSpawnP
 		CBaseObject *pObj = static_cast< CBaseObject* >( IBaseObjectAutoList::AutoList()[i] );
 		if ( pObj->GetType() != OBJ_TELEPORTER )
 			continue;
-
-		if ( pObj->GetTeamNumber() != TF_TEAM_PVE_INVADERS )
-			continue;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (pObj->GetTeamNumber() != TF_TEAM_PVE_INVADERS)
+				continue;
+		}
+		else {
+			if (pObj->GetTeamNumber() != TF_TEAM_RED)
+				continue;
+		}
 
 		if ( pObj->IsBuilding() )
 			continue;
@@ -552,8 +557,14 @@ bool CMissionPopulator::UpdateMissionDestroySentries( void )
 			// Disposable sentries are not valid targets
 			if ( pObj->IsDisposableBuilding() )
 				continue;
-
-			if ( pObj->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS )
+			int team;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				team = TF_TEAM_PVE_DEFENDERS;
+			}
+			else {
+				team = TF_TEAM_BLUE;
+			}
+			if ( pObj->GetTeamNumber() == team )
 			{
 				CTFPlayer *sentryOwner = pObj->GetOwner();
 				if ( sentryOwner )
@@ -571,8 +582,12 @@ bool CMissionPopulator::UpdateMissionDestroySentries( void )
 	}
 
 	CUtlVector< CTFPlayer * > livePlayerVector;
-	CollectPlayers( &livePlayerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS );
-
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&livePlayerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS);
+	}
+	else {
+		CollectPlayers(&livePlayerVector, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS);
+	}
 	// dispatch a sentry busting squad for each dangerous sentry
 	bool didSpawn = false;
 
@@ -648,7 +663,12 @@ bool CMissionPopulator::UpdateMissionDestroySentries( void )
 
 						if ( TFGameRules() )
 						{
-							TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_SENTRY_BUSTER, TF_TEAM_PVE_DEFENDERS );
+							if (!TFGameRules()->IsHL2MVMMode()) {
+								TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_SENTRY_BUSTER, TF_TEAM_PVE_DEFENDERS);
+							}
+							else {
+								TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_SENTRY_BUSTER, TF_TEAM_BLUE);
+							}
 						}
 
 						// what bot should do after spawning at teleporter exit
@@ -707,8 +727,12 @@ bool CMissionPopulator::UpdateMission( CTFBot::MissionType mission )
 	int activeMissionMembers = 0;
 
 	CUtlVector< CTFPlayer * > livePlayerVector;
-	CollectPlayers( &livePlayerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS );
-
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		CollectPlayers(&livePlayerVector, TF_TEAM_PVE_INVADERS, COLLECT_ONLY_LIVING_PLAYERS);
+	}
+	else {
+		CollectPlayers(&livePlayerVector, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS);
+	}
 	for( int i=0; i<livePlayerVector.Count(); ++i )
 	{
 		CTFBot *pBot = dynamic_cast<CTFBot *>( livePlayerVector[i] );
@@ -737,10 +761,14 @@ bool CMissionPopulator::UpdateMission( CTFBot::MissionType mission )
 	{
 		return false;
 	}
-
+	int currentEnemyCount;
 	// are there enough free slots?
-	int currentEnemyCount = GetGlobalTeam( TF_TEAM_PVE_INVADERS )->GetNumPlayers();
-
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		currentEnemyCount = GetGlobalTeam(TF_TEAM_PVE_INVADERS)->GetNumPlayers();
+	}
+	else {
+		currentEnemyCount = GetGlobalTeam(TF_TEAM_RED)->GetNumPlayers();
+	}
 	if ( currentEnemyCount + m_desiredCount > tf_mvm_max_invaders.GetInt() )
 	{
 		// not enough slots yet
@@ -812,7 +840,12 @@ bool CMissionPopulator::UpdateMission( CTFBot::MissionType mission )
 
 								if ( nSniperCount == 1 )
 								{
-									TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_SNIPER_CALLOUT, TF_TEAM_PVE_DEFENDERS );
+									if (!TFGameRules()->IsHL2MVMMode()) {
+										TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_SNIPER_CALLOUT, TF_TEAM_PVE_DEFENDERS);
+									}
+									else {
+										TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_SNIPER_CALLOUT, TF_TEAM_BLUE);
+									}
 								}
 							}
 						}
@@ -1576,8 +1609,13 @@ void CWaveSpawnPopulator::Update( void )
 					return;
 				}
 
-				int currentEnemyCount = GetGlobalTeam( TF_TEAM_PVE_INVADERS )->GetNumPlayers();
-
+				int currentEnemyCount;
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					currentEnemyCount = GetGlobalTeam(TF_TEAM_PVE_INVADERS)->GetNumPlayers();
+				}
+				else {
+					currentEnemyCount = GetGlobalTeam(TF_TEAM_RED)->GetNumPlayers();
+				}
 				if ( currentEnemyCount + m_spawnCount + m_reservedPlayerSlotCount > tf_mvm_max_invaders.GetInt() )
 				{
 					// no space right now
@@ -2116,12 +2154,23 @@ void CWave::ActiveWaveUpdate( void )
 
 		for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
 		{
-			// Now let's kill everyone left on the attacking team
-			CTFPlayer *pPlayer = ToTFPlayer( UTIL_PlayerByIndex( i ) );
-			if ( pPlayer && pPlayer->IsAlive() && 
-				 ( ( pPlayer->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) || pPlayer->m_Shared.InCond( TF_COND_REPROGRAMMED ) ) )
-			{
-				pPlayer->CommitSuicide( true, false );
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				// Now let's kill everyone left on the attacking team
+				CTFPlayer* pPlayer = ToTFPlayer(UTIL_PlayerByIndex(i));
+				if (pPlayer && pPlayer->IsAlive() &&
+					((pPlayer->GetTeamNumber() == TF_TEAM_PVE_INVADERS) || pPlayer->m_Shared.InCond(TF_COND_REPROGRAMMED)))
+				{
+					pPlayer->CommitSuicide(true, false);
+				}
+			}
+			else {
+				// Now let's kill everyone left on the attacking team
+				CTFPlayer* pPlayer = ToTFPlayer(UTIL_PlayerByIndex(i));
+				if (pPlayer && pPlayer->IsAlive() &&
+					((pPlayer->GetTeamNumber() == TF_TEAM_RED) || pPlayer->m_Shared.InCond(TF_COND_REPROGRAMMED)))
+				{
+					pPlayer->CommitSuicide(true, false);
+				}
 			}
 		}
 	}
@@ -2152,13 +2201,26 @@ void CWave::WaveCompleteUpdate( void )
 			CTeamControlPointMaster *pMaster = g_hControlPointMasters.Count() ? g_hControlPointMasters[0] : NULL;
 			if ( pMaster && ( pMaster->GetNumPoints() > 0 ) )
 			{
-				if ( pMaster->GetNumPointsOwnedByTeam( TF_TEAM_PVE_DEFENDERS ) == pMaster->GetNumPoints() )
-				{
-					IGameEvent *event = gameeventmanager->CreateEvent( "mvm_adv_wave_complete_no_gates" );
-					if ( event )
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					if (pMaster->GetNumPointsOwnedByTeam(TF_TEAM_PVE_DEFENDERS) == pMaster->GetNumPoints())
 					{
-						event->SetInt( "index", GetManager()->GetWaveNumber() );
-						gameeventmanager->FireEvent( event );
+						IGameEvent* event = gameeventmanager->CreateEvent("mvm_adv_wave_complete_no_gates");
+						if (event)
+						{
+							event->SetInt("index", GetManager()->GetWaveNumber());
+							gameeventmanager->FireEvent(event);
+						}
+					}
+				}
+				else {
+					if (pMaster->GetNumPointsOwnedByTeam(TF_TEAM_BLUE) == pMaster->GetNumPoints())
+					{
+						IGameEvent* event = gameeventmanager->CreateEvent("mvm_adv_wave_complete_no_gates");
+						if (event)
+						{
+							event->SetInt("index", GetManager()->GetWaveNumber());
+							gameeventmanager->FireEvent(event);
+						}
 					}
 				}
 			}
@@ -2233,7 +2295,12 @@ void CWave::WaveCompleteUpdate( void )
 
 		// Force respawn dead defenders
 		CUtlVector< CTFPlayer * > playerVector;
-		CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+		}
+		else {
+			CollectPlayers(&playerVector, TF_TEAM_BLUE);
+		}
 		FOR_EACH_VEC( playerVector, i )
 		{
 			if ( !playerVector[i]->IsAlive() )

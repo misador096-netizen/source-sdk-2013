@@ -18,6 +18,7 @@ CHandle<CMannVsMachineLogic> g_hMannVsMachineLogic;
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 BEGIN_DATADESC( CMannVsMachineLogic )
+	DEFINE_KEYFIELD(bHL2MVM, FIELD_BOOLEAN, "hl2mvm"),
 	DEFINE_THINKFUNC( Update ),
 END_DATADESC()
 

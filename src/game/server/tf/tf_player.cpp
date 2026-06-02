@@ -1221,7 +1221,14 @@ void CTFPlayer::SetGrapplingHookTarget( CBaseEntity *pTarget, bool bShouldBleed 
 //-----------------------------------------------------------------------------
 bool CTFPlayer::CanBeForcedToLaugh( void )
 {
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && IsBot() && ( GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && IsBot() && ( GetTeamNumber() == team ) )
 		return false;
 
 	return true;
@@ -1245,6 +1252,47 @@ void CTFPlayer::TFPlayerThink()
 		MessageEnd();
 
 		m_flSendPickupWeaponMessageTime = -1.f;
+	}
+	extern ConVar tf_teleporter_fov_time;
+	extern ConVar tf_teleporter_fov_start;
+	extern ConVar tf_mvm_engineer_teleporter_uber_duration;
+	if (GetTeamNumber() == TF_TEAM_RED && TFGameRules() && TFGameRules()->IsHL2MVMMode() && !IsBot())
+	{
+		// Get our current spawn point location and see if it's near a teleporter
+		Vector myOrigin = GetAbsOrigin();
+
+		// Find teleporter exits on our team
+		for (int i = 0; i < IBaseObjectAutoList::AutoList().Count(); ++i)
+		{
+			CBaseObject* pObj = static_cast<CBaseObject*>(IBaseObjectAutoList::AutoList()[i]);
+			if (pObj->GetType() != OBJ_TELEPORTER || pObj->GetTeamNumber() != GetTeamNumber())
+				continue;
+
+			CObjectTeleporter* pTeleporter = assert_cast<CObjectTeleporter*>(pObj);
+			if (pTeleporter->IsEntrance())
+				continue;
+
+			// Check if we spawned at this teleporter's location (within a small radius)
+			Vector teleporterOrigin = pTeleporter->GetAbsOrigin();
+			if (!teleported && pTeleporter) // 64 unit radius for exact teleporter spawns
+			{
+			// We spawned at this teleporter, offset position above it
+			Vector spawnOrigin = teleporterOrigin;
+			spawnOrigin.z += 32.0f; // Offset 32 units above the teleporter
+			SetAbsOrigin(spawnOrigin);
+			SetAbsAngles(pTeleporter->GetAbsAngles());
+			EmitSound("MVM.Robot_Teleporter_Deliver");
+			TeleportEffect();
+			SetFOV(this, 0, tf_teleporter_fov_time.GetFloat(), tf_teleporter_fov_start.GetInt());
+			SpeakConceptIfAllowed(MP_CONCEPT_TELEPORTED);
+			float flUberTime = tf_mvm_engineer_teleporter_uber_duration.GetFloat();
+			m_Shared.AddCond(TF_COND_INVULNERABLE, flUberTime);
+			m_Shared.AddCond(TF_COND_INVULNERABLE_WEARINGOFF, flUberTime);
+			color32 fadeColor = { 255,255,255,100 };
+			UTIL_ScreenFade(this, fadeColor, 0.25, 0.4, FFADE_IN);
+			teleported = 1;
+			}
+		}
 	}
 
 	// In doomsday event, kart can run over ghost to do stuff
@@ -2735,18 +2783,35 @@ void CTFPlayer::PostThink()
 		}
 
 		// clamp maximum velocity to avoid sending mini-bosses into the stratosphere
-		if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-		{
-			Vector ahead = GetAbsVelocity();
-			float speed = ahead.NormalizeInPlace();
-
-			const float velocityLimit = 1000.0f;
-			if ( speed > velocityLimit )
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
 			{
-				speed = velocityLimit;
-			}
+				Vector ahead = GetAbsVelocity();
+				float speed = ahead.NormalizeInPlace();
 
-			SetAbsVelocity( speed * ahead );
+				const float velocityLimit = 1000.0f;
+				if (speed > velocityLimit)
+				{
+					speed = velocityLimit;
+				}
+
+				SetAbsVelocity(speed * ahead);
+			}
+		}
+		else {
+			if (GetTeamNumber() == TF_TEAM_RED)
+			{
+				Vector ahead = GetAbsVelocity();
+				float speed = ahead.NormalizeInPlace();
+
+				const float velocityLimit = 1000.0f;
+				if (speed > velocityLimit)
+				{
+					speed = velocityLimit;
+				}
+
+				SetAbsVelocity(speed * ahead);
+			}
 		}
 	}
 
@@ -2763,10 +2828,14 @@ void CTFPlayer::PrecacheMvM()
 		COMPILE_TIME_ASSERT( ARRAYSIZE( g_szBotModels ) == TF_LAST_NORMAL_CLASS );
 		int iModelIndex = PrecacheModel( g_szBotModels[ i ] );
 		PrecacheGibsForModel( iModelIndex );
+		iModelIndex = PrecacheModel(g_szBotViewmodels[i]);
+		PrecacheGibsForModel(iModelIndex);
 
 		COMPILE_TIME_ASSERT( ARRAYSIZE( g_szBotBossModels ) == TF_LAST_NORMAL_CLASS );
 		iModelIndex = PrecacheModel( g_szBotBossModels[ i ] );
 		PrecacheGibsForModel( iModelIndex );
+		iModelIndex = PrecacheModel(g_szBotBossViewmodels[i]);
+		PrecacheGibsForModel(iModelIndex);
 	}
 
 	int iModelIndex = PrecacheModel( g_szBotBossSentryBusterModel );
@@ -3564,7 +3633,7 @@ void CTFPlayer::Spawn()
 	MDLCACHE_CRITICAL_SECTION();
 
 	m_bIsABot = IsBot();
-
+	teleported = 1;
 	if ( m_bIsABot && IsBotOfType( TF_BOT_TYPE ) )
 	{
 		m_nBotSkill = ToTFBot( this )->GetDifficulty();
@@ -3579,6 +3648,53 @@ void CTFPlayer::Spawn()
 	SetModelScale( 1.0f );
 	UpdateModel();
 
+	if (GetTeamNumber() == TF_TEAM_RED && TFGameRules() && TFGameRules()->IsHL2MVMMode() && !IsBot())
+	{
+		// Get our current spawn point location and see if it's near a teleporter
+		Vector myOrigin = GetAbsOrigin();
+
+		// Find teleporter exits on our team
+		for (int i = 0; i < IBaseObjectAutoList::AutoList().Count(); ++i)
+		{
+			CBaseObject* pObj = static_cast<CBaseObject*>(IBaseObjectAutoList::AutoList()[i]);
+			if (pObj->GetType() != OBJ_TELEPORTER || pObj->GetTeamNumber() != GetTeamNumber())
+				continue;
+
+			CObjectTeleporter* pTeleporter = assert_cast<CObjectTeleporter*>(pObj);
+			if (pTeleporter->IsEntrance())
+				continue;
+
+			if (pTeleporter->IsBuilding())
+				continue;
+
+			if (pTeleporter->HasSapper())
+				continue;
+
+			if (pTeleporter->IsPlasmaDisabled())
+				continue;
+				teleported = 0;
+		}
+	}
+	extern ConVar tf_mvm_miniboss_scale;
+	int nRobotClassIndex = (GetPlayerClass() ? GetPlayerClass()->GetClassIndex() : TF_CLASS_UNDEFINED);
+	if (TFGameRules()->IsHL2MVMMode() && !IsFakeClient() && GetTeamNumber() == TF_TEAM_RED)
+	{
+		if (nRobotClassIndex >= TF_CLASS_SCOUT && nRobotClassIndex <= TF_CLASS_ENGINEER)
+		{
+			if ((-1.0f >= tf_mvm_miniboss_scale.GetFloat() || IsMiniBoss()) && g_pFullFileSystem->FileExists(g_szBotBossModels[nRobotClassIndex]))
+			{
+				GetPlayerClass()->SetCustomModel(g_szBotBossModels[nRobotClassIndex], USE_CLASS_ANIMATIONS);
+				UpdateModel();
+				SetBloodColor(DONT_BLEED);
+			}
+			else if (g_pFullFileSystem->FileExists(g_szBotModels[nRobotClassIndex]))
+			{
+				GetPlayerClass()->SetCustomModel(g_szBotModels[nRobotClassIndex], USE_CLASS_ANIMATIONS);
+				UpdateModel();
+				SetBloodColor(DONT_BLEED);
+			}
+		}
+	}
 	SetMoveType( MOVETYPE_WALK );
 	BaseClass::Spawn();
 
@@ -4539,8 +4655,15 @@ void CTFPlayer::ManageRegularWeapons( TFPlayerClassData_t *pData )
 
 			for ( int i = 0; i < CLASS_LOADOUT_POSITION_COUNT; i++ )
 			{
+				int team;
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					team = TF_TEAM_PVE_INVADERS;
+				}
+				else {
+					team = TF_TEAM_RED;
+				}
 				// bots don't need the action slot item for MvM (canteen)
- 				if ( ( i == LOADOUT_POSITION_ACTION ) && IsBot() && TFGameRules() && TFGameRules()->IsMannVsMachineMode() && ( GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+ 				if ( ( i == LOADOUT_POSITION_ACTION ) && IsBot() && TFGameRules() && TFGameRules()->IsMannVsMachineMode() && ( GetTeamNumber() == team ) )
  					continue;
 
 				m_EquippedLoadoutItemIndices[i] = LOADOUT_SLOT_USE_BASE_ITEM;
@@ -6076,8 +6199,12 @@ int CTFPlayer::GetAutoTeam( int nPreferedTeam /*= TF_TEAM_AUTOASSIGN*/ )
 						}
 					}
 				}
-
-				return TFGameRules()->GetTeamAssignmentOverride( this, TF_TEAM_PVE_DEFENDERS );
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					return TFGameRules()->GetTeamAssignmentOverride(this, TF_TEAM_PVE_DEFENDERS);
+				}
+				else {
+					return TFGameRules()->GetTeamAssignmentOverride(this, TF_TEAM_BLUE);
+				}
 			}
 		}
 
@@ -6822,13 +6949,24 @@ void CTFPlayer::HandleCommand_JoinClass( const char *pClassName, bool bAllowSpaw
 		ClientPrint( this, HUD_PRINTCENTER, "#TF_MVM_NoClassUpgradeUI" );
 		return;
 	}
-
-	if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_DEFENDERS )
-	{
-		if ( IsReadyToPlay() && !TFGameRules()->InSetup() && g_pPopulationManager && !g_pPopulationManager->IsInEndlessWaves() )
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_DEFENDERS)
 		{
-			ClientPrint( this, HUD_PRINTTALK, "#TF_MVM_NoClassChangeAfterSetup" );
-			return;
+			if (IsReadyToPlay() && !TFGameRules()->InSetup() && g_pPopulationManager && !g_pPopulationManager->IsInEndlessWaves())
+			{
+				ClientPrint(this, HUD_PRINTTALK, "#TF_MVM_NoClassChangeAfterSetup");
+				return;
+			}
+		}
+	}
+	else {
+		if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_BLUE)
+		{
+			if (IsReadyToPlay() && !TFGameRules()->InSetup() && g_pPopulationManager && !g_pPopulationManager->IsInEndlessWaves())
+			{
+				ClientPrint(this, HUD_PRINTTALK, "#TF_MVM_NoClassChangeAfterSetup");
+				return;
+			}
 		}
 	}
 
@@ -9180,13 +9318,24 @@ int CTFPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			SetBlastJumpState( nJumpType, bPlaySound );
 		}
 	}
-
-	if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-	{
-		// can only bounce invaders when they are on the ground
-		if ( GetGroundEntity() == NULL )
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS)
 		{
-			info.SetDamageForce( vec3_origin );
+			// can only bounce invaders when they are on the ground
+			if (GetGroundEntity() == NULL)
+			{
+				info.SetDamageForce(vec3_origin);
+			}
+		}
+	}
+	else {
+		if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_RED)
+		{
+			// can only bounce invaders when they are on the ground
+			if (GetGroundEntity() == NULL)
+			{
+				info.SetDamageForce(vec3_origin);
+			}
 		}
 	}
 
@@ -10438,7 +10587,14 @@ void CTFPlayer::ApplyPushFromDamage( const CTakeDamageInfo &info, Vector vecDir 
 
 		if ( TFGameRules()->GameModeUsesUpgrades() )
 		{
-			if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+			int team;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				team = TF_TEAM_PVE_INVADERS;
+			}
+			else {
+				team = TF_TEAM_RED;
+			}
+			if ( GetTeamNumber() == team )
 			{
 				// invading bots can't be pushed by sentry guns
 				if ( info.GetInflictor() && info.GetInflictor()->IsBaseObject() )
@@ -10447,7 +10603,7 @@ void CTFPlayer::ApplyPushFromDamage( const CTakeDamageInfo &info, Vector vecDir 
 				}
 			}
 
-			if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS && !bBigKnockback )
+			if ( GetTeamNumber() == team && !bBigKnockback )
 			{
 				if ( IsMiniBoss() )
 				{
@@ -10833,8 +10989,14 @@ int CTFPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		{
 			vDamagePos = WorldSpaceCenter();
 		}
-
-		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_INVADERS;
+		}
+		else {
+			team = TF_TEAM_RED;
+		}
+		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == team )
 		{
 			if ( ( IsMiniBoss() && static_cast< float >( GetHealth() ) / GetMaxHealth() > 0.3f ) || realDamage < 50 )
 			{
@@ -11033,7 +11195,14 @@ void CTFPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 
 		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 		{
-			if ( pTFVictim && pTFVictim->IsBot() && ( pTFVictim->GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
+			int team;
+			if (!TFGameRules()->IsHL2MVMMode()) {
+				team = TF_TEAM_PVE_INVADERS;
+			}
+			else {
+				team = TF_TEAM_RED;
+			}
+			if ( pTFVictim && pTFVictim->IsBot() && ( pTFVictim->GetTeamNumber() == team ) )
 			{
 				if ( pTFVictim->GetDeployingBombState() > TF_BOMB_DEPLOYING_NONE )
 				{
@@ -12118,7 +12287,14 @@ void CTFPlayer::Event_Killed( const CTakeDamageInfo &info )
 	// check for MvM achievements
 	if ( TFGameRules()->IsMannVsMachineMode() && IsBot() )
 	{
-		if ( pPlayerAttacker && ( pPlayerAttacker->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS ) )
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_DEFENDERS;
+		}
+		else {
+			team = TF_TEAM_BLUE;
+		}
+		if ( pPlayerAttacker && ( pPlayerAttacker->GetTeamNumber() == team ) )
 		{
 			if ( FStrEq( "mvm_mannhattan", STRING( gpGlobals->mapname ) ) )
 			{
@@ -12243,8 +12419,9 @@ void CTFPlayer::Event_Killed( const CTakeDamageInfo &info )
 						{
 							pMoneyMaker = pPlayerAttacker;
 						}
-
-						DropCurrencyPack( TF_CURRENCY_PACK_CUSTOM, nDropAmount, bForceDistribute, pMoneyMaker );
+						if (!TFGameRules()->IsHL2MVMMode()) { // Robots in HL2MVM don't drop money on death.
+							DropCurrencyPack(TF_CURRENCY_PACK_CUSTOM, nDropAmount, bForceDistribute, pMoneyMaker);
+						}
 					}
 				}
 			}
@@ -12282,15 +12459,28 @@ void CTFPlayer::Event_Killed( const CTakeDamageInfo &info )
 		{
 			g_pPopulationManager->OnPlayerKilled( this );
 		}
-
-		if ( IsBot() && HasTheFlag() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-		{
-			int nLevel = TFObjectiveResource()->GetFlagCarrierUpgradeLevel();
-			IGameEvent *event = gameeventmanager->CreateEvent( "mvm_bomb_carrier_killed" );
-			if ( event )
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (IsBot() && HasTheFlag() && GetTeamNumber() == TF_TEAM_PVE_INVADERS)
 			{
-				event->SetInt( "level", nLevel );
-				gameeventmanager->FireEvent( event );
+				int nLevel = TFObjectiveResource()->GetFlagCarrierUpgradeLevel();
+				IGameEvent* event = gameeventmanager->CreateEvent("mvm_bomb_carrier_killed");
+				if (event)
+				{
+					event->SetInt("level", nLevel);
+					gameeventmanager->FireEvent(event);
+				}
+			}
+		}
+		else {
+			if (IsBot() && HasTheFlag() && GetTeamNumber() == TF_TEAM_RED)
+			{
+				int nLevel = TFObjectiveResource()->GetFlagCarrierUpgradeLevel();
+				IGameEvent* event = gameeventmanager->CreateEvent("mvm_bomb_carrier_killed");
+				if (event)
+				{
+					event->SetInt("level", nLevel);
+					gameeventmanager->FireEvent(event);
+				}
 			}
 		}
 
@@ -12830,12 +13020,19 @@ void CTFPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	if ( TFGameRules()->IsMannVsMachineMode() )
 	{
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_DEFENDERS;
+		}
+		else {
+			team = TF_TEAM_BLUE;
+		}
 		// Have teammates announce my death
-		if ( GetTeamNumber() == TF_TEAM_PVE_DEFENDERS )
+		if ( GetTeamNumber() == team )
 		{
 			// have the last player on the defenders speak the last_man_standing line
 			CUtlVector< CTFPlayer * > playerVector;
-			CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS, true );
+			CollectPlayers( &playerVector, team, true );
 			if ( playerVector.Count() == 1 )
 			{
 				CTFPlayer *pAlivePlayer = playerVector[0];
@@ -12848,17 +13045,17 @@ void CTFPlayer::Event_Killed( const CTakeDamageInfo &info )
 			{
 				if ( pPlayerAttacker && pPlayerAttacker->IsMiniBoss() )
 				{
-					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_KILLED_TEAMMATE, TF_TEAM_PVE_DEFENDERS );
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_KILLED_TEAMMATE, team );
 				}
 
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_DEFENDER_DIED, TF_TEAM_PVE_DEFENDERS, CFmtStr( "victimclass:%s", g_aPlayerClassNames_NonLocalized[ GetPlayerClass()->GetClassIndex() ] ).Access() );
+				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_DEFENDER_DIED, team, CFmtStr( "victimclass:%s", g_aPlayerClassNames_NonLocalized[ GetPlayerClass()->GetClassIndex() ] ).Access() );
 			}
 		}
 		else
 		{
 			if ( IsMiniBoss() )
 			{
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_KILLED, TF_TEAM_PVE_DEFENDERS );
+				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_GIANT_KILLED, team );
 			}
 		}
 	}
@@ -13404,11 +13601,19 @@ void CTFPlayer::TeamFortress_ClientDisconnected( void )
 void CTFPlayer::RemoveAllOwnedEntitiesFromWorld( bool bExplodeBuildings /* = false */ )
 {
 	RemoveOwnedProjectiles();
-
-	if ( TFGameRules()->IsMannVsMachineMode() && ( GetTeamNumber() == TF_TEAM_PVE_INVADERS ) )
-	{
-		// MvM engineer bots leave their sentries behind when they die
-		return;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (TFGameRules()->IsMannVsMachineMode() && (GetTeamNumber() == TF_TEAM_PVE_INVADERS))
+		{
+			// MvM engineer bots leave their sentries behind when they die
+			return;
+		}
+	}
+	else {
+		if (TFGameRules()->IsMannVsMachineMode() && (GetTeamNumber() == TF_TEAM_RED))
+		{
+			// MvM engineer bots leave their sentries behind when they die
+			return;
+		}
 	}
 
 
@@ -14193,8 +14398,14 @@ void CTFPlayer::RemoveAmmo( int iCount, int iAmmoIndex )
 	// Infinite primary, secondary and metal in these game modes
 	if ( TFGameRules() && iAmmoIndex < TF_AMMO_GRENADES1 )
 	{
-		if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-			return;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+				return;
+		}
+		else {
+			if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_RED)
+				return;
+		}
 
 	}
 
@@ -14208,8 +14419,14 @@ void CTFPlayer::RemoveAmmo( int iCount, const char *szName )
 {
 	if ( TFGameRules() )
 	{
-		if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-			return;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+				return;
+		}
+		else {
+			if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_RED)
+				return;
+		}
 
 		if ( TFGameRules()->GameModeUsesMiniBosses() && IsMiniBoss() )
 			return;
@@ -15257,14 +15474,20 @@ void CTFPlayer::DeathSound( const CTakeDamageInfo &info )
 	}
 
 	int nDeathSoundOffset = DEATH_SOUND_FIRST;
-
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == team )
 	{
 		nDeathSoundOffset = IsMiniBoss() ? DEATH_SOUND_GIANT_MVM_FIRST : DEATH_SOUND_MVM_FIRST;
 	}
 	
 	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && 
-		 GetTeamNumber() != TF_TEAM_PVE_INVADERS && !m_bGoingFeignDeath )
+		 GetTeamNumber() != team && !m_bGoingFeignDeath )
 	{
 		EmitSound( "MVM.PlayerDied" );
 		return;
@@ -15317,7 +15540,14 @@ void CTFPlayer::DeathSound( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 const char* CTFPlayer::GetSceneSoundToken( void )
 {
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	int team;
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == team )
 	{
 		if ( IsMiniBoss() )
 		{
@@ -18655,11 +18885,18 @@ void CTFPlayer::DoTauntAttack( void )
 					if ( HasTheFlag() )
 					{
 						bool bShouldDrop = true;
-
-						// Always allow teams to hear each other in TD mode
-						if ( TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS )
-						{
-							bShouldDrop = false;
+						if (!TFGameRules()->IsHL2MVMMode()) {
+							// Always allow teams to hear each other in TD mode
+							if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_PVE_INVADERS)
+							{
+								bShouldDrop = false;
+							}
+						}
+						else {
+							if (TFGameRules()->IsMannVsMachineMode() && GetTeamNumber() == TF_TEAM_RED)
+							{
+								bShouldDrop = false;
+							}
 						}
 
 						if ( bShouldDrop )
@@ -19495,7 +19732,14 @@ void CTFPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet )
 	// only roll random halloween taunt if the active weapon doesn't have special taunt attribute
 	if ( TFGameRules()->IsHolidayActive( kHoliday_Halloween ) && iSpecialTaunt == 0 )
 	{
-		if ( !TFGameRules()->IsMannVsMachineMode() || ( GetTeamNumber() != TF_TEAM_PVE_INVADERS ) )
+		int team;
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			team = TF_TEAM_PVE_INVADERS;
+		}
+		else {
+			team = TF_TEAM_RED;
+		}
+		if ( !TFGameRules()->IsMannVsMachineMode() || ( GetTeamNumber() != team ) )
 		{
 			if ( pActiveWeapon )
 			{
@@ -19612,9 +19856,17 @@ void CTFPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet )
 	
 	if ( TFGameRules()->IsMannVsMachineMode() )
 	{
-		if ( GetTeamNumber() == TF_TEAM_PVE_DEFENDERS )
-		{
-			criteriaSet.AppendCriteria( "IsMvMDefender", "1" );
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			if (GetTeamNumber() == TF_TEAM_PVE_DEFENDERS)
+			{
+				criteriaSet.AppendCriteria("IsMvMDefender", "1");
+			}
+		}
+		else {
+			if (GetTeamNumber() == TF_TEAM_BLUE)
+			{
+				criteriaSet.AppendCriteria("IsMvMDefender", "1");
+			}
 		}
 	}
 }
@@ -20647,49 +20899,94 @@ void CTFPlayer::InputRoundSpawn( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CTFPlayer::Internal_HandleMapEvent( inputdata_t &inputdata )
 {
-	if ( FStrEq( "mvm_mannhattan", STRING( gpGlobals->mapname ) ) )
-	{
-		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		if (FStrEq("mvm_mannhattan", STRING(gpGlobals->mapname)))
 		{
-			if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+			if (TFGameRules() && TFGameRules()->IsMannVsMachineMode())
 			{
-				if ( FStrEq( inputdata.value.String(), "banana" ) )
+				if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
 				{
-					CTFPlayer *pRecentDamager = TFGameRules()->GetRecentDamager( this, 0, 5.0 );
-					if ( pRecentDamager && ( pRecentDamager->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS ) )
+					if (FStrEq(inputdata.value.String(), "banana"))
 					{
-						pRecentDamager->AwardAchievement( ACHIEVEMENT_TF_MVM_MAPS_MANNHATTAN_MYSTERY );
+						CTFPlayer* pRecentDamager = TFGameRules()->GetRecentDamager(this, 0, 5.0);
+						if (pRecentDamager && (pRecentDamager->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS))
+						{
+							pRecentDamager->AwardAchievement(ACHIEVEMENT_TF_MVM_MAPS_MANNHATTAN_MYSTERY);
+						}
+					}
+					else if (FStrEq(inputdata.value.String(), "pit"))
+					{
+						IGameEvent* event = gameeventmanager->CreateEvent("mvm_mannhattan_pit");
+						if (event)
+						{
+							gameeventmanager->FireEvent(event);
+						}
 					}
 				}
-				else if ( FStrEq( inputdata.value.String(), "pit" ) )
+			}
+		}
+		else if (FStrEq("mvm_rottenburg", STRING(gpGlobals->mapname)))
+		{
+			if (TFGameRules() && TFGameRules()->IsMannVsMachineMode())
+			{
+				if (GetTeamNumber() == TF_TEAM_PVE_INVADERS)
 				{
-					IGameEvent *event = gameeventmanager->CreateEvent( "mvm_mannhattan_pit" );
-					if ( event )
+					if (FStrEq(inputdata.value.String(), "pit"))
 					{
-						gameeventmanager->FireEvent( event );
+						CTFPlayer* pRecentDamager = TFGameRules()->GetRecentDamager(this, 0, 5.0);
+						if (pRecentDamager && (pRecentDamager->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS))
+						{
+							pRecentDamager->AwardAchievement(ACHIEVEMENT_TF_MVM_MAPS_ROTTENBURG_PIT_GRIND);
+						}
 					}
 				}
 			}
 		}
 	}
-	else if ( FStrEq( "mvm_rottenburg", STRING( gpGlobals->mapname ) ) )
-	{
-		if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
+	else {
+		if (FStrEq("mvm_mannhattan", STRING(gpGlobals->mapname)))
 		{
-			if ( GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+			if (TFGameRules() && TFGameRules()->IsMannVsMachineMode())
 			{
-				if ( FStrEq( inputdata.value.String(), "pit" ) )
+				if (GetTeamNumber() == TF_TEAM_RED)
 				{
-					CTFPlayer *pRecentDamager = TFGameRules()->GetRecentDamager( this, 0, 5.0 );
-					if ( pRecentDamager && ( pRecentDamager->GetTeamNumber() == TF_TEAM_PVE_DEFENDERS ) )
+					if (FStrEq(inputdata.value.String(), "banana"))
 					{
-						pRecentDamager->AwardAchievement( ACHIEVEMENT_TF_MVM_MAPS_ROTTENBURG_PIT_GRIND );
+						CTFPlayer* pRecentDamager = TFGameRules()->GetRecentDamager(this, 0, 5.0);
+						if (pRecentDamager && (pRecentDamager->GetTeamNumber() == TF_TEAM_BLUE))
+						{
+							pRecentDamager->AwardAchievement(ACHIEVEMENT_TF_MVM_MAPS_MANNHATTAN_MYSTERY);
+						}
+					}
+					else if (FStrEq(inputdata.value.String(), "pit"))
+					{
+						IGameEvent* event = gameeventmanager->CreateEvent("mvm_mannhattan_pit");
+						if (event)
+						{
+							gameeventmanager->FireEvent(event);
+						}
+					}
+				}
+			}
+		}
+		else if (FStrEq("mvm_rottenburg", STRING(gpGlobals->mapname)))
+		{
+			if (TFGameRules() && TFGameRules()->IsMannVsMachineMode())
+			{
+				if (GetTeamNumber() == TF_TEAM_RED)
+				{
+					if (FStrEq(inputdata.value.String(), "pit"))
+					{
+						CTFPlayer* pRecentDamager = TFGameRules()->GetRecentDamager(this, 0, 5.0);
+						if (pRecentDamager && (pRecentDamager->GetTeamNumber() == TF_TEAM_BLUE))
+						{
+							pRecentDamager->AwardAchievement(ACHIEVEMENT_TF_MVM_MAPS_ROTTENBURG_PIT_GRIND);
+						}
 					}
 				}
 			}
 		}
 	}
-
 	BaseClass::Internal_HandleMapEvent( inputdata );
 }
 

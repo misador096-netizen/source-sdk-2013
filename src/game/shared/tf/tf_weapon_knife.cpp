@@ -428,8 +428,15 @@ bool CTFKnife::CanPerformBackstabAgainstTarget( CTFPlayer *pTarget )
 	if ( IsBehindAndFacingTarget( pTarget ) )
 		return true;
 
+	int team;
 	// Is target (bot) disabled via a sapper?
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && pTarget->GetTeamNumber() == TF_TEAM_PVE_INVADERS )
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		team = TF_TEAM_PVE_INVADERS;
+	}
+	else {
+		team = TF_TEAM_RED;
+	}
+	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() && pTarget->GetTeamNumber() == team )
 	{
 		if ( pTarget->m_Shared.InCond( TF_COND_MVM_BOT_STUN_RADIOWAVE ) )
 			return true;

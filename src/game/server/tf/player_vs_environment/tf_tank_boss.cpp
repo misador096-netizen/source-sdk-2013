@@ -331,9 +331,12 @@ void CTFTankBoss::Spawn( void )
 	BaseClass::Spawn();
 	m_vCollisionMins.Init();
 	m_vCollisionMaxs.Init();
-
-	ChangeTeam( TF_TEAM_PVE_INVADERS );
-
+	if (!TFGameRules()->IsHL2MVMMode()) {
+		ChangeTeam(TF_TEAM_PVE_INVADERS);
+	}
+	else {
+		ChangeTeam(TF_TEAM_RED);
+	}
 	m_damageModelIndex = 0;
 	SetModel( s_TankModel[ m_damageModelIndex ] );
 	SetModelIndexOverride( VISION_MODE_NONE, modelinfo->GetModelIndex( s_TankModel[ m_damageModelIndex ] ) );
@@ -501,8 +504,12 @@ void CTFTankBoss::Spawn( void )
 			TFGameRules()->BroadcastSound( 255, "Announcer.MVM_Tank_Alert_Multiple" );
 			m_flLastTankAlert = gpGlobals->curtime;
 		}
-
-		TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_TANK_CALLOUT, TF_TEAM_PVE_DEFENDERS );
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_TANK_CALLOUT, TF_TEAM_PVE_DEFENDERS);
+		}
+		else {
+			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_TANK_CALLOUT, TF_TEAM_BLUE);
+		}
 	}
 
 	m_isDroppingBomb = false;
@@ -589,7 +596,12 @@ void CTFTankBoss::Event_Killed( const CTakeDamageInfo &info )
 			if ( pLogicRelay && !pLogicRelay->IsDisabled() )
 			{
 				CUtlVector<CTFPlayer *> playerVector;
-				CollectPlayers( &playerVector, TF_TEAM_PVE_DEFENDERS );
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					CollectPlayers(&playerVector, TF_TEAM_PVE_DEFENDERS);
+				}
+				else {
+					CollectPlayers(&playerVector, TF_TEAM_BLUE);
+				}
 				FOR_EACH_VEC( playerVector, i )
 				{
 					if ( !playerVector[i] )
@@ -831,8 +843,12 @@ void CTFTankBoss::TankBossThink( void )
 				StopSound( "MVM.TankEngineLoop" );
 
 				EmitSound( "MVM.TankDeploy" );
-
-				TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_TANK_DEPLOYING, TF_TEAM_PVE_DEFENDERS );
+				if (!TFGameRules()->IsHL2MVMMode()) {
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_TANK_DEPLOYING, TF_TEAM_PVE_DEFENDERS);
+				}
+				else {
+					TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_TANK_DEPLOYING, TF_TEAM_BLUE);
+				}
 			}
 		}
 
@@ -1000,8 +1016,12 @@ void CTFTankBoss::Explode( void )
 	if ( m_bIsPlayerKilled )
 	{
 		TFGameRules()->BroadcastSound( 255, "Announcer.MVM_General_Destruction" );
-		TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed( MP_CONCEPT_MVM_TANK_DEAD, TF_TEAM_PVE_DEFENDERS );
-
+		if (!TFGameRules()->IsHL2MVMMode()) {
+			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_TANK_DEAD, TF_TEAM_PVE_DEFENDERS);
+		}
+		else {
+			TFGameRules()->HaveAllPlayersSpeakConceptIfAllowed(MP_CONCEPT_MVM_TANK_DEAD, TF_TEAM_BLUE);
+		}
 		IGameEvent *event = gameeventmanager->CreateEvent( "mvm_tank_destroyed_by_players" );
 		if ( event )
 		{
