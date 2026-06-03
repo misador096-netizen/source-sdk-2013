@@ -13609,9 +13609,9 @@ void CTFPlayer::RemoveAllOwnedEntitiesFromWorld( bool bExplodeBuildings /* = fal
 		}
 	}
 	else {
-		if (TFGameRules()->IsMannVsMachineMode() && (GetTeamNumber() == TF_TEAM_RED))
+		if (TFGameRules()->IsMannVsMachineMode() && IsBot() && (GetTeamNumber() == TF_TEAM_RED)) // Fixed a game breaking bug. Normal players shouldn't have this.
 		{
-			// MvM engineer bots leave their sentries behind when they die
+			// MvM engineer bots leave their sentries behind when they die 
 			return;
 		}
 	}
