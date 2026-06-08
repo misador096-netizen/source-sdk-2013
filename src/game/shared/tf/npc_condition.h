@@ -19,15 +19,10 @@
 	#undef CTFPlayer
 	#define CTFPlayer C_TFPlayer
 	class C_TFPlayer;
-#undef CAI_BaseNPC
-#define CAI_BaseNPC C_AI_BaseNPC
-	class C_AI_BaseNPC;
 #endif
 
 class CTFPlayer;
-class CAI_BaseNPC;
 class CTFCondition;
-class NPCCondition;
 
 class CTFConditionList
 {
@@ -102,90 +97,6 @@ class CTFCondition_CritBoost : public CTFCondition
 {
 public:
 	CTFCondition_CritBoost( ETFCond type, float duration, CTFPlayer* outer, CBaseEntity* provider = NULL );
-
-	virtual void OnAdded();
-	virtual void OnRemoved();
-	virtual void OnThink();
-	virtual void OnServerThink();
-
-	// Condition Traits
-	virtual bool IsHealable() { return false; }
-	virtual bool UsesMinDuration() { return true; }
-};
-
-class NPCConditionList
-{
-public:
-	DECLARE_EMBEDDED_NETWORKVAR();
-	DECLARE_CLASS_NOBASE(NPCConditionList);
-	DECLARE_PREDICTABLE();
-
-	NPCConditionList();
-
-	bool Add(ETFCond type, float duration, CAI_BaseNPC* outer, CBaseEntity* provider = NULL);
-	bool _Add(ETFCond type, float duration, CAI_BaseNPC* outer, CBaseEntity* provider = NULL);
-	bool Remove(ETFCond type, bool ignore_duration = false);
-	bool _Remove(ETFCond type, bool ignore_duration = false);
-	void RemoveAll();
-
-	bool InCond(ETFCond type) const;
-	CBaseEntity* GetProvider(ETFCond type) const;
-
-	void Think();
-	void ServerThink();
-
-#ifdef CLIENT_DLL
-	// Forwarded from player shared.
-	virtual void OnPreDataChanged(void);
-	virtual void OnDataChanged(CAI_BaseNPC* outer);
-	void UpdateClientConditions(CAI_BaseNPC* outer);
-#endif
-
-private:
-	CUtlVector< NPCCondition* > _conditions;
-
-	CNetworkVar(int, _condition_bits); // Bitfield of set conditions for fast checking.
-	int _old_condition_bits;
-};
-
-class NPCCondition
-{
-public:
-	NPCCondition(ETFCond type, float duration, CAI_BaseNPC* outer, CBaseEntity* provider = NULL);
-	virtual ~NPCCondition();
-
-	virtual void Add(float duration);
-
-	virtual void OnAdded() = 0;
-	virtual void OnRemoved() = 0;
-	virtual void OnThink() = 0;
-	virtual void OnServerThink() = 0;
-
-	// Condition Traits
-	virtual bool IsHealable() { return false; }
-	virtual bool UsesMinDuration() { return false; }
-
-	ETFCond	GetType() { return _type; }
-	float	GetMaxDuration() { return _max_duration; }
-	void	SetMaxDuration(float val) { _max_duration = val; }
-	float	GetMinDuration() { return _min_duration; }
-	void	SetMinDuration(float val) { if (UsesMinDuration()) { _min_duration = val; } }
-	CAI_BaseNPC* GetOuter() { return _outer; }
-	void	SetProvider(CBaseEntity* provider) { _provider = provider; }
-	CBaseEntity* GetProvider() { return _provider; }
-
-private:
-	float			_min_duration;
-	float			_max_duration;
-	const ETFCond	_type;
-	CAI_BaseNPC* _outer;
-	CHandle< CBaseEntity >	_provider;
-};
-
-class NPCCondition_CritBoost : public NPCCondition
-{
-public:
-	NPCCondition_CritBoost(ETFCond type, float duration, CAI_BaseNPC* outer, CBaseEntity* provider = NULL);
 
 	virtual void OnAdded();
 	virtual void OnRemoved();

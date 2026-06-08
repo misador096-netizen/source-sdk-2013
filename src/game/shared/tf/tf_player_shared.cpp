@@ -68,6 +68,7 @@
 // Server specific.
 #else
 #include "tf_player.h"
+#include "ai_basenpc.h"
 #include "te_effect_dispatch.h"
 #include "tf_fx.h"
 #include "util.h"
@@ -1106,7 +1107,7 @@ void CTFPlayerShared::AddCond( ETFCond eCond, float flDuration /* = PERMANENT_CO
 {
 	Assert( eCond >= 0 && eCond < TF_COND_LAST );
 	Assert( eCond < m_ConditionData.Count() );
-
+	
 	// If we're dead, don't take on any new conditions
 	if( !m_pOuter || !m_pOuter->IsAlive() )
 	{

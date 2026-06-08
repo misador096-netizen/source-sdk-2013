@@ -135,7 +135,7 @@ public:
 	{
 		CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
 
-		if ( ( pEntity->IsPlayer() || pEntity->IsCombatItem() ) && ( pEntity->GetTeamNumber() == m_iIgnoreTeam || m_iIgnoreTeam == TEAM_ANY ) )
+		if ( ( pEntity->IsPlayer() || pEntity->IsNPC() || pEntity->IsCombatItem()) && (pEntity->GetTeamNumber() == m_iIgnoreTeam || m_iIgnoreTeam == TEAM_ANY))
 		{
 			return false;
 		}
@@ -160,7 +160,7 @@ public:
 	virtual bool ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask )
 	{
 		CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
-		if ( pEntity && pEntity->IsPlayer() )
+		if ( pEntity && (pEntity->IsPlayer() || pEntity->IsNPC()) )
 			return false;
 
 		return BaseClass::ShouldHitEntity( pServerEntity, contentsMask );

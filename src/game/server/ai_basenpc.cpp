@@ -85,7 +85,8 @@
 #include "tier0/vcrmode.h"
 #include "death_pose.h"
 #include "datacache/imdlcache.h"
-#include "vstdlib/jobthread.h"
+#include "tf_player.h"
+#include "tf_gamerules.h"
 
 #ifdef HL2_EPISODIC
 #include "npc_alyx_episodic.h"
@@ -331,7 +332,7 @@ void CPostFrameNavigationHook::FrameUpdatePreEntityThink( void )
 	// If the thread is executing, then wait for it to finish
 	if ( g_pQueuedNavigationQueryJob )
 	{
-		g_pQueuedNavigationQueryJob->WaitForFinishAndRelease();
+//		g_pQueuedNavigationQueryJob->WaitForFinishAndRelease();
 		g_pQueuedNavigationQueryJob = NULL;
 		m_Functors.Purge();
 	}
@@ -354,7 +355,7 @@ void CPostFrameNavigationHook::FrameUpdatePostEntityThink( void )
 	SetGrameFrameRunning( false );
 
 	// Throw this off to a thread job
-	g_pQueuedNavigationQueryJob = ThreadExecute( &ProcessNavigationQueries, m_Functors.Base(), m_Functors.Count() );
+//	g_pQueuedNavigationQueryJob = ThreadExecute( &ProcessNavigationQueries, m_Functors.Base(), m_Functors.Count() );
 }
 
 //-----------------------------------------------------------------------------
@@ -570,6 +571,28 @@ void CAI_BaseNPC::SelectDeathPose( const CTakeDamageInfo &info )
 	SetDeathPoseFrame( iDeathFrame );
 }
 
+bool CAI_BaseNPC::ShouldCollide(int collisionGroup, int contentsMask) const
+{
+	extern ConVar tf_avoidteammates;
+	if (((collisionGroup == COLLISION_GROUP_PLAYER_MOVEMENT) && tf_avoidteammates.GetBool()) ||
+		collisionGroup == TFCOLLISION_GROUP_ROCKETS || collisionGroup == TFCOLLISION_GROUP_ROCKET_BUT_NOT_WITH_OTHER_ROCKETS)
+	{
+		switch (GetTeamNumber())
+		{
+		case TF_TEAM_RED:
+			if (!(contentsMask & CONTENTS_REDTEAM))
+				return false;
+			break;
+
+		case TF_TEAM_BLUE:
+			if (!(contentsMask & CONTENTS_BLUETEAM))
+				return false;
+			break;
+		}
+	}
+	return BaseClass::ShouldCollide(collisionGroup, contentsMask);
+}
+
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  :
@@ -583,12 +606,45 @@ void CAI_BaseNPC::Event_Killed( const CTakeDamageInfo &info )
 	}
 
 	Wake( false );
-	
+	int iWeaponID;
+	const char* killer_weapon_name = TFGameRules()->GetKillingWeaponName(info, NULL, &iWeaponID);
+	const char* killer_weapon_log_name = killer_weapon_name;
+	CTFPlayer* pPlayer = ToTFPlayer(info.GetAttacker());
 	//Adrian: Select a death pose to extrapolate the ragdoll's velocity.
 	SelectDeathPose( info );
+	CTFWeaponBase* pWeapon = dynamic_cast<CTFWeaponBase*>(pPlayer->Weapon_OwnsThisID(iWeaponID));
+	if (pWeapon)
+	{
+		CEconItemView* pItem = pWeapon->GetAttributeContainer()->GetItem();
 
+		if (pItem)
+		{
+			if (pItem->GetStaticData()->GetIconClassname())
+			{
+				killer_weapon_name = pItem->GetStaticData()->GetIconClassname();
+			}
+
+			if (pItem->GetStaticData()->GetLogClassname())
+			{
+				killer_weapon_log_name = pItem->GetStaticData()->GetLogClassname();
+			}
+		}
+	}
 	m_lifeState = LIFE_DYING;
+	IGameEvent* event = gameeventmanager->CreateEvent("player_death");
+	if (event)
+	{
+		event->SetInt("attacker", pPlayer->GetUserID());
+		event->SetString("victimname", "NPC");
+		event->SetInt("victimteam", GetTeamNumber());
+		event->SetString("weapon", killer_weapon_name);
+		event->SetString("weapon_logclassname", killer_weapon_log_name);
+		event->SetInt("weaponid", iWeaponID);
+		event->SetInt("priority", 7);
+		Msg("We fired an event\n");
 
+		gameeventmanager->FireEvent(event);
+	}
 	CleanupOnDeath( info.GetAttacker() );
 
 	StopLoopingSounds();
@@ -677,7 +733,10 @@ bool CAI_BaseNPC::PassesDamageFilter( const CTakeDamageInfo &info )
 				bHitByVehicle = true;
 			}
 		}
-
+		extern ConVar friendlyfire;
+		if (info.GetAttacker()->GetTeamNumber() == GetTeamNumber() && !friendlyfire.GetBool()) { // Prevent team damage
+			return false;
+		}
 		if ( bHitByVehicle || (npcEnemy && npcEnemy->IRelationType( this ) == D_LI) )
 		{
 			m_fNoDamageDecal = true;
@@ -715,6 +774,53 @@ int CAI_BaseNPC::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 	if ( GetSleepState() == AISS_WAITING_FOR_THREAT )
 		Wake();
+	//CTFGameRules::DamageModifyExtras_t outParams;
+	//outParams.bIgniting = false;
+	//outParams.bSelfBlastDmg = false;
+	//outParams.bSendPreFeignDamage = false;
+	//outParams.bPlayDamageReductionSound = false;
+	CTFPlayer* pTFAttacker = ToTFPlayer(info.GetAttacker());
+	CBaseEntity* pAttacker = info.GetAttacker();
+	int iPrevHealth = m_iHealth;
+	IGameEvent* event = gameeventmanager->CreateEvent("player_hurt");
+	if (event)
+	{
+		event->SetInt("userid", this->entindex());
+		event->SetInt("health", MAX(0, m_iHealth));
+
+		// HLTV event priority, not transmitted
+		event->SetInt("priority", 5);
+
+		int iDamageAmount = (iPrevHealth - m_iHealth);
+		event->SetInt("damageamount", iDamageAmount);
+
+		// Hurt by another player.
+		if (pAttacker->IsPlayer())
+		{
+			CBasePlayer* pPlayer = ToBasePlayer(pAttacker);
+			event->SetInt("attacker", pPlayer->GetUserID());
+
+			event->SetInt("custom", info.GetDamageCustom());
+//			event->SetBool("showdisguisedcrit", m_bShowDisguisedCrit);
+			event->SetBool("crit", (info.GetDamageType() & DMG_CRITICAL) != 0);
+//			event->SetBool("minicrit", m_bMiniCrit);
+//			event->SetBool("allseecrit", m_bAllSeeCrit);
+			Assert((int)m_eBonusAttackEffect < 256);
+//			event->SetInt("bonuseffect", (int)m_eBonusAttackEffect);
+
+			if (pTFAttacker && pTFAttacker->GetActiveTFWeapon())
+			{
+				event->SetInt("weaponid", pTFAttacker->GetActiveTFWeapon()->GetWeaponID());
+			}
+		}
+		// Hurt by world.
+		else
+		{
+			event->SetInt("attacker", 0);
+		}
+
+		gameeventmanager->FireEvent(event);
+	}
 
 	// NOTE: This must happen after the base class is called; we need to reduce
 	// health before the pain sound, since some NPCs use the final health

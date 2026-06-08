@@ -13,6 +13,7 @@
 
 
 #include "c_basecombatcharacter.h"
+#include "ai_basenpc_shared.h"
 
 // NOTE: Moved all controller code into c_basestudiomodel
 class C_AI_BaseNPC : public C_BaseCombatCharacter
@@ -40,7 +41,8 @@ public:
 	void					ClientThink( void );
 	void					OnDataChanged( DataUpdateType_t type );
 	bool					ImportantRagdoll( void ) { return m_bImportanRagdoll;	}
-
+	AI_BaseNPC_Shared m_Shared;
+	friend class AI_BaseNPC_Shared;
 private:
 	C_AI_BaseNPC( const C_AI_BaseNPC & ); // not defined, not accessible
 	float m_flTimePingEffect;

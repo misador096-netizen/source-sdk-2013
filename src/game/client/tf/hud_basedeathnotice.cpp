@@ -461,7 +461,8 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 		int killer = engine->GetPlayerForUserID( event->GetInt( "attacker" ) );
 		const char *killedwith = event->GetString( "weapon" );
 		const char *killedwithweaponlog = event->GetString( "weapon_logclassname" );
-
+		const char* npcname = event->GetString("victimname");
+		int victimteam = event->GetInt("victimteam");
 		if ( bObjectDeath && victim == 0 )
 		{
 			// for now, no death notices of map placed objects
@@ -472,6 +473,9 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 		// Get the names of the players
 		const char *killer_name = ( killer > 0 ) ? g_PR->GetPlayerName( killer ) : "";
 		const char *victim_name = g_PR->GetPlayerName( victim );
+		char printtest[2048];
+		V_snprintf(printtest, sizeof(printtest), "Victim Name: %s \n", npcname);
+		Msg(printtest);
 		if ( !killer_name )
 		{
 			killer_name = "";
@@ -480,6 +484,9 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 		if ( !victim_name )
 		{
 			victim_name = "";
+		}
+		if (npcname) {
+			victim_name = npcname;
 		}
 
 		// Make a new death notice
@@ -508,6 +515,9 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 		m_DeathNotices[iMsg].bLocalPlayerInvolved = bLocalPlayerInvolved;
 		m_DeathNotices[iMsg].Killer.iTeam = ( killer > 0 ) ? g_PR->GetTeam( killer ) : 0;
 		m_DeathNotices[iMsg].Victim.iTeam = g_PR->GetTeam( victim );
+		if (victimteam) {
+			m_DeathNotices[iMsg].Victim.iTeam = victimteam;
+		}
 		Q_strncpy( m_DeathNotices[iMsg].Killer.szName, killer_name, ARRAYSIZE( m_DeathNotices[iMsg].Killer.szName ) );
 		Q_strncpy( m_DeathNotices[iMsg].Victim.szName, victim_name, ARRAYSIZE( m_DeathNotices[iMsg].Victim.szName ) );
 		if ( killedwith && *killedwith )

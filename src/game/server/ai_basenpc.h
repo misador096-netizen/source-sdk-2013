@@ -36,6 +36,7 @@
 #include "soundent.h"
 #include "ai_navigator.h"
 #include "tier1/functors.h"
+#include "ai_basenpc_shared.h"
 
 
 #define PLAYER_SQUADNAME "player_squad"
@@ -505,11 +506,14 @@ public:
 	virtual void		OnRestore();
 	void				SaveConditions( ISave &save, const CAI_ScheduleBits &conditions );
 	void				RestoreConditions( IRestore &restore, CAI_ScheduleBits *pConditions );
-
+	virtual	bool		ShouldCollide(int collisionGroup, int contentsMask) const;
 	bool				ShouldSavePhysics()	{ return false; }
 	virtual unsigned int	PhysicsSolidMaskForEntity( void ) const;
 
 	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+
+	CNetworkVarEmbedded(AI_BaseNPC_Shared, m_Shared);
+	friend class AI_BaseNPC_Shared;
 
 	//---------------------------------
 	
