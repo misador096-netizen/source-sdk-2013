@@ -1839,7 +1839,7 @@ bool CObjectSentrygun::MoveTurret( void )
 	{
 		iBaseTurnRate *= 1.35f;
 	}
-
+	// m_vecGoalAngles are set in Attack()
 	// any x movement?
 	if ( m_vecCurAngles.x != m_vecGoalAngles.x )
 	{
@@ -1938,6 +1938,10 @@ bool CObjectSentrygun::MoveTurret( void )
 		{
 			m_vecCurAngles.y = m_vecGoalAngles.y;
 		}
+		QAngle angToTarget;
+		angToTarget.x = m_vecCurAngles.x;
+		angToTarget.y = m_vecCurAngles.y;
+		GetBuilder()->SnapEyeAngles(angToTarget);
 
 		QAngle angles = GetAbsAngles();
 

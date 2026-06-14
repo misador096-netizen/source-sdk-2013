@@ -947,12 +947,9 @@ bool CTFBotSpawner::Spawn( const Vector &rawHere, EntityHandleVector_t *result )
 		return false;
 	}
 
-	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
-	{
 		// Only spawn bots while the round is running in MVM mode
 		if ( TFGameRules()->State_Get() != GR_STATE_RND_RUNNING )
 			return false;
-	}
 
 	// the ground may be variable here, try a few heights
 	float z;
